@@ -14,7 +14,6 @@ class CLayerSurface {
 
     zwlr_layer_surface_v1* pLayerSurface  = nullptr;
     wl_surface*            pSurface       = nullptr;
-    wl_surface*            pCursorSurface = nullptr;
 
     bool                   wantsACK  = false;
     uint32_t               ACKSerial = 0;
@@ -32,6 +31,4 @@ class CLayerSurface {
     bool                   rendered = false;
 
     wl_callback*           frame_callback = nullptr;
-
-    wl_cursor_image*       pCursorImg = nullptr;
 };

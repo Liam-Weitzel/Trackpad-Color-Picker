@@ -36,8 +36,6 @@ void CHyprmag::init() {
         m->pSCFrame = zwlr_screencopy_manager_v1_capture_output(m_pSCMgr, false, m->output);
 
         zwlr_screencopy_frame_v1_add_listener(m->pSCFrame, &Events::screencopyListener, m_pLastSurface);
-
-        m_pLastSurface->pCursorSurface = wl_compositor_create_surface(m_pCompositor);
     }
 
     wl_display_roundtrip(m_pWLDisplay);
@@ -74,20 +72,6 @@ void CHyprmag::recheckACK() {
                              ls->m_pMonitor->size.x * ls->m_pMonitor->scale * 4);
                 createBuffer(&ls->buffers[1], ls->m_pMonitor->size.x * ls->m_pMonitor->scale, ls->m_pMonitor->size.y * ls->m_pMonitor->scale, WL_SHM_FORMAT_ARGB8888,
                              ls->m_pMonitor->size.x * ls->m_pMonitor->scale * 4);
-
-                int XCURSOR_SIZE = 24;
-                if (getenv("XCURSOR_SIZE")) {
-                    XCURSOR_SIZE = std::stoi(getenv("XCURSOR_SIZE"));
-                }
-
-                const auto THEME  = wl_cursor_theme_load(getenv("XCURSOR_THEME"), XCURSOR_SIZE * ls->m_pMonitor->scale, m_pWLSHM);
-                auto       cursor = wl_cursor_theme_get_cursor(THEME, "crosshair");
-
-                if (!cursor)
-                    cursor = wl_cursor_theme_get_cursor(THEME, "left_ptr");
-
-                if (cursor)
-                    ls->pCursorImg = cursor->images[0];
             }
         }
     }
@@ -380,7 +364,9 @@ void CHyprmag::renderSurface(CLayerSurface* pSurface, bool forceInactive) {
 
         cairo_scale(PCAIRO, 1, 1);
 
-        cairo_arc(PCAIRO, m_vLastCoords.x * pSurface->m_pMonitor->scale, m_vLastCoords.y * pSurface->m_pMonitor->scale, 105 / SCALEBUFS.x, 0, 2 * M_PI);
+        const int radius = 100;
+
+        cairo_arc(PCAIRO, m_vLastCoords.x * pSurface->m_pMonitor->scale, m_vLastCoords.y * pSurface->m_pMonitor->scale, radius * 1.02 / SCALEBUFS.x, 0, 2 * M_PI);
         cairo_clip(PCAIRO);
 
         cairo_fill(PCAIRO);
@@ -396,11 +382,11 @@ void CHyprmag::renderSurface(CLayerSurface* pSurface, bool forceInactive) {
         cairo_matrix_t matrix;
         cairo_matrix_init_identity(&matrix);
         cairo_matrix_translate(&matrix, CLICKPOS.x + 0.5f, CLICKPOS.y + 0.5f);
-        cairo_matrix_scale(&matrix, 0.1f, 0.1f);
+        cairo_matrix_scale(&matrix, 0.4f, 0.4f);
         cairo_matrix_translate(&matrix, -CLICKPOS.x / SCALEBUFS.x - 0.5f, -CLICKPOS.y / SCALEBUFS.y - 0.5f);
         cairo_pattern_set_matrix(PATTERN, &matrix);
         cairo_set_source(PCAIRO, PATTERN);
-        cairo_arc(PCAIRO, m_vLastCoords.x * pSurface->m_pMonitor->scale, m_vLastCoords.y * pSurface->m_pMonitor->scale, 100 / SCALEBUFS.x, 0, 2 * M_PI);
+        cairo_arc(PCAIRO, m_vLastCoords.x * pSurface->m_pMonitor->scale, m_vLastCoords.y * pSurface->m_pMonitor->scale, radius / SCALEBUFS.x, 0, 2 * M_PI);
         cairo_clip(PCAIRO);
         cairo_paint(PCAIRO);
 

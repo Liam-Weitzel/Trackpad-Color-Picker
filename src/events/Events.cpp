@@ -91,18 +91,12 @@ void Events::handleCapabilities(void* data, wl_seat* wl_seat, uint32_t capabilit
 
 void Events::handlePointerEnter(void* data, struct wl_pointer* wl_pointer, uint32_t serial, struct wl_surface* surface, wl_fixed_t surface_x, wl_fixed_t surface_y) {
     g_pHyprmag->markDirty();
+    wl_pointer_set_cursor(wl_pointer, 0, nullptr, 0, 0);
 
     for (auto& ls : g_pHyprmag->m_vLayerSurfaces) {
         if (ls->pSurface == surface) {
             g_pHyprmag->m_pLastSurface = ls.get();
-
-            if (!ls->pCursorImg)
-                break;
-
-            wl_surface_set_buffer_scale(ls->pCursorSurface, ls->m_pMonitor->scale);
-            wl_surface_attach(ls->pCursorSurface, wl_cursor_image_get_buffer(ls->pCursorImg), 0, 0);
-            wl_pointer_set_cursor(wl_pointer, serial, ls->pCursorSurface, ls->pCursorImg->hotspot_x / ls->m_pMonitor->scale, ls->pCursorImg->hotspot_y / ls->m_pMonitor->scale);
-            wl_surface_commit(ls->pCursorSurface);
+            break;
         }
     }
 }
