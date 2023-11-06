@@ -22,6 +22,7 @@ class CHyprmag {
     xkb_state*                                  m_pXKBState   = nullptr;
 
     bool                                        m_bRenderInactive = false;
+    int                                         m_iRadius         = 200;
 
     bool                                        m_bRunning = true;
 

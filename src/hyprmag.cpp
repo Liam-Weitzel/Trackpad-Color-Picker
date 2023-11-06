@@ -364,7 +364,7 @@ void CHyprmag::renderSurface(CLayerSurface* pSurface, bool forceInactive) {
 
         cairo_scale(PCAIRO, 1, 1);
 
-        const int radius = 100;
+        const int radius = g_pHyprmag->m_iRadius;
 
         cairo_arc(PCAIRO, m_vLastCoords.x * pSurface->m_pMonitor->scale, m_vLastCoords.y * pSurface->m_pMonitor->scale, radius * 1.02 / SCALEBUFS.x, 0, 2 * M_PI);
         cairo_clip(PCAIRO);
