@@ -1,5 +1,5 @@
 {
-  description = "Hyprpicker - a wlroots-compatible Wayland color picker that does not suck";
+  description = "Hyprmag - A wlroots-compatible Wayland screen magnifier, based on hyprpicker";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -22,17 +22,17 @@
     ]);
   in {
     overlays.default = _: prev: rec {
-      hyprpicker = prev.callPackage ./nix/default.nix {
+      hyprmag = prev.callPackage ./nix/default.nix {
         stdenv = prev.gcc12Stdenv;
         version = "0.pre" + "+date=" + (mkDate (self.lastModifiedDate or "19700101")) + "_" + (self.shortRev or "dirty");
         inherit (prev.xorg) libXdmcp;
       };
-      hyprpicker-debug = hyprpicker.override {debug = true;};
+      hyprmag-debug = hyprmag.override {debug = true;};
     };
 
     packages = genSystems (system:
       (self.overlays.default null pkgsFor.${system})
-      // {default = self.packages.${system}.hyprpicker;});
+      // {default = self.packages.${system}.hyprmag;});
 
     formatter = genSystems (system: pkgsFor.${system}.alejandra);
   };

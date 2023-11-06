@@ -48,6 +48,7 @@ clear:
 	rm -rf build
 	rm -f *.o *-protocol.h *-protocol.c
 
+build:
 release:
 	mkdir -p build && cmake --no-warn-unused-cli -DCMAKE_BUILD_TYPE:STRING=Release -H./ -B./build -G Ninja
 	cmake --build ./build --config Release --target all -j 10
@@ -63,5 +64,5 @@ all:
 
 install:
 	mkdir -p ${DESTDIR}${PREFIX}/bin ${DESTDIR}${PREFIX}/share/man/man1
-	cp doc/hyprpicker.1 ${DESTDIR}${PREFIX}/share/man/man1
-	cp build/hyprpicker ${DESTDIR}${PREFIX}/bin
+	cp doc/hyprmag.1 ${DESTDIR}${PREFIX}/share/man/man1
+	cp build/hyprmag ${DESTDIR}${PREFIX}/bin

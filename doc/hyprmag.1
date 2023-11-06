@@ -1,9 +1,9 @@
 .Dd $Mdocdate: November 14 2022 $
-.Dt HYPRPICKER 1
+.Dt HYPRMAG 1
 .Os Linux
 .Sh NAME
-.Nm hyprpicker
-.Nd wlroots-compatible wayland color picker
+.Nm hyprmag
+.Nd wlroots-compatible wayland screen magnifier
 .Sh SYNOPSIS
 .Nm
 .Op Fl anh
@@ -11,7 +11,7 @@
 .Sh DESCRIPTION
 The
 .Nm
-utility is a color-picker with support for various output formats.
+utility is a screen magnifier.
 When
 .Nm
 is invoked the cursor is transformed into a magnifying lens, and clicking on any
@@ -67,20 +67,20 @@ If set, disables colored output.
 .Sh EXAMPLES
 Get a pixels color:
 .Pp
-.Dl $ hyprpicker
+.Dl $ hyprmag
 .Pp
 Get a pixels color in HSL, wrapped in a CSS
 .Fn hsl
 function:
 .Pp
-.Dl $ hyprpicker -f hsl | sed 's/^/rgb(/; s/$/)/; y/ /,/'
+.Dl $ hyprmag -f hsl | sed 's/^/rgb(/; s/$/)/; y/ /,/'
 .Sh SEE ALSO
 .Xr hyprctl 1 ,
 .Xr hyprland 1 ,
 .Xr sed 1 ,
 .Xr wl-copy 1
 .Pp
-.Lk https://github.com/hyprwm/hyprpicker "The Hyprpicker Sources"
+.Lk https://github.com/SIMULATAN/hyprmag "The Hyprmag Sources"
 .Sh AUTHORS
 .An -nosplit
 The
@@ -90,4 +90,4 @@ utility was originally written by
 and the manual page by
 .An Thomas Voss Aq Mt mail@thomasvoss.com .
 .Sh BUGS
-.Lk https://github.com/hyprwm/hyprpicker/issues "The Hyprpicker Bug Tracker"
+.Lk https://github.com/SIMULATAN/hyprmag/issues "The Hyprmag Bug Tracker"

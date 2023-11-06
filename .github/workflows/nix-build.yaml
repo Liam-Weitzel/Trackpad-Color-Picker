@@ -1,4 +1,4 @@
-name: Build Hyprpicker (Nix)
+name: Build Hyprmag (Nix)
 
 on: [push, pull_request, workflow_dispatch]
 jobs:
@@ -22,5 +22,5 @@ jobs:
       with:
         name: hyprland
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-    - name: Build Hyprpicker with default settings
+    - name: Build Hyprmag with default settings
       run: nix build --print-build-logs --accept-flake-config

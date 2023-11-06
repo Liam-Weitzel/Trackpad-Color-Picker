@@ -4,16 +4,7 @@
 #include "helpers/LayerSurface.hpp"
 #include "helpers/PoolBuffer.hpp"
 
-enum eOutputMode
-{
-    OUTPUT_CMYK = 0,
-    OUTPUT_HEX,
-    OUTPUT_RGB,
-    OUTPUT_HSL,
-    OUTPUT_HSV
-};
-
-class CHyprpicker {
+class CHyprmag {
   public:
     void                                        init();
 
@@ -30,13 +21,7 @@ class CHyprpicker {
     xkb_keymap*                                 m_pXKBKeymap  = nullptr;
     xkb_state*                                  m_pXKBState   = nullptr;
 
-    eOutputMode                                 m_bSelectedOutputMode = OUTPUT_HEX;
-
-    bool                                        m_bFancyOutput = true;
-
-    bool                                        m_bAutoCopy       = false;
     bool                                        m_bRenderInactive = false;
-    bool                                        m_bNoZoom         = false;
 
     bool                                        m_bRunning = true;
 
@@ -68,9 +53,7 @@ class CHyprpicker {
 
     void                                        finish(int code = 0);
 
-    CColor                                      getColorFromPixel(CLayerSurface*, Vector2D);
-
   private:
 };
 
-inline std::unique_ptr<CHyprpicker> g_pHyprpicker;
+inline std::unique_ptr<CHyprmag> g_pHyprmag;

@@ -24,7 +24,7 @@
   version ? "git",
 }:
 stdenv.mkDerivation {
-  pname = "hyprpicker" + lib.optionalString debug "-debug";
+  pname = "hyprmag" + lib.optionalString debug "-debug";
   inherit version;
   src = ../.;
 
@@ -76,14 +76,14 @@ stdenv.mkDerivation {
 
     mkdir -p $out/{bin,share/licenses}
 
-    install -Dm755 build/hyprpicker -t $out/bin
-    install -Dm644 LICENSE -t $out/share/licenses/hyprpicker
+    install -Dm755 build/hyprmag -t $out/bin
+    install -Dm644 LICENSE -t $out/share/licenses/hyprmag
 
     runHook postInstall
   '';
 
   meta = with lib; {
-    homepage = "https://github.com/hyprwm/hyprpicker";
+    homepage = "https://github.com/SIMULATAN/hyprmag";
     description = "A wlroots-compatible Wayland color picker that does not suck";
     license = licenses.bsd3;
     platforms = platforms.linux;

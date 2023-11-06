@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.4)
-project(hyprpicker 
+project(hyprmag
     DESCRIPTION "A blazing fast wayland wallpaper utility"
 )
 
 set(CMAKE_MESSAGE_LOG_LEVEL "STATUS")
 
-message(STATUS "Configuring hyprpicker!")
+message(STATUS "Configuring hyprmag!")
 
 # Get git info
 # hash and branch
@@ -45,22 +45,22 @@ pkg_check_modules(deps REQUIRED IMPORTED_TARGET wayland-client wayland-protocols
 
 file(GLOB_RECURSE SRCFILES "src/*.cpp")
 
-add_executable(hyprpicker ${SRCFILES})
+add_executable(hyprmag ${SRCFILES})
 
-target_compile_definitions(hyprpicker PRIVATE "-DGIT_COMMIT_HASH=\"${GIT_COMMIT_HASH}\"")
-target_compile_definitions(hyprpicker PRIVATE "-DGIT_BRANCH=\"${GIT_BRANCH}\"")
-target_compile_definitions(hyprpicker PRIVATE "-DGIT_COMMIT_MESSAGE=\"${GIT_COMMIT_MESSAGE}\"")
-target_compile_definitions(hyprpicker PRIVATE "-DGIT_DIRTY=\"${GIT_DIRTY}\"")
+target_compile_definitions(hyprmag PRIVATE "-DGIT_COMMIT_HASH=\"${GIT_COMMIT_HASH}\"")
+target_compile_definitions(hyprmag PRIVATE "-DGIT_BRANCH=\"${GIT_BRANCH}\"")
+target_compile_definitions(hyprmag PRIVATE "-DGIT_COMMIT_MESSAGE=\"${GIT_COMMIT_MESSAGE}\"")
+target_compile_definitions(hyprmag PRIVATE "-DGIT_DIRTY=\"${GIT_DIRTY}\"")
 
-target_link_libraries(hyprpicker rt)
+target_link_libraries(hyprmag rt)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
 
-target_link_libraries(hyprpicker PkgConfig::deps)
+target_link_libraries(hyprmag PkgConfig::deps)
 
-target_link_libraries(hyprpicker
+target_link_libraries(hyprmag
         OpenGL
         GLESv2
         pthread

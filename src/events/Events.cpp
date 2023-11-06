@@ -1,6 +1,6 @@
 #include "Events.hpp"
 
-#include "../hyprpicker.hpp"
+#include "../hyprmag.hpp"
 
 void Events::geometry(void* data, wl_output* output, int32_t x, int32_t y, int32_t width_mm, int32_t height_mm, int32_t subpixel, const char* make, const char* model,
                       int32_t transform) {
@@ -45,30 +45,30 @@ void Events::ls_configure(void* data, zwlr_layer_surface_v1* surface, uint32_t s
     PLAYERSURFACE->wantsACK  = true;
     PLAYERSURFACE->working   = true;
 
-    g_pHyprpicker->recheckACK();
+    g_pHyprmag->recheckACK();
 }
 
 void Events::handleGlobal(void* data, struct wl_registry* registry, uint32_t name, const char* interface, uint32_t version) {
     if (strcmp(interface, wl_compositor_interface.name) == 0) {
-        g_pHyprpicker->m_pCompositor = (wl_compositor*)wl_registry_bind(registry, name, &wl_compositor_interface, 4);
+        g_pHyprmag->m_pCompositor = (wl_compositor*)wl_registry_bind(registry, name, &wl_compositor_interface, 4);
     } else if (strcmp(interface, wl_shm_interface.name) == 0) {
-        g_pHyprpicker->m_pWLSHM = (wl_shm*)wl_registry_bind(registry, name, &wl_shm_interface, 1);
+        g_pHyprmag->m_pWLSHM = (wl_shm*)wl_registry_bind(registry, name, &wl_shm_interface, 1);
     } else if (strcmp(interface, wl_output_interface.name) == 0) {
-        g_pHyprpicker->m_mtTickMutex.lock();
+        g_pHyprmag->m_mtTickMutex.lock();
 
-        const auto PMONITOR    = g_pHyprpicker->m_vMonitors.emplace_back(std::make_unique<SMonitor>()).get();
+        const auto PMONITOR    = g_pHyprmag->m_vMonitors.emplace_back(std::make_unique<SMonitor>()).get();
         PMONITOR->wayland_name = name;
         PMONITOR->name         = "";
         PMONITOR->output       = (wl_output*)wl_registry_bind(registry, name, &wl_output_interface, 4);
         wl_output_add_listener(PMONITOR->output, &Events::outputListener, PMONITOR);
 
-        g_pHyprpicker->m_mtTickMutex.unlock();
+        g_pHyprmag->m_mtTickMutex.unlock();
     } else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {
-        g_pHyprpicker->m_pLayerShell = (zwlr_layer_shell_v1*)wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, 1);
+        g_pHyprmag->m_pLayerShell = (zwlr_layer_shell_v1*)wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, 1);
     } else if (strcmp(interface, wl_seat_interface.name) == 0) {
-        g_pHyprpicker->createSeat((wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, 1));
+        g_pHyprmag->createSeat((wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, 1));
     } else if (strcmp(interface, zwlr_screencopy_manager_v1_interface.name) == 0) {
-        g_pHyprpicker->m_pSCMgr = (zwlr_screencopy_manager_v1*)wl_registry_bind(registry, name, &zwlr_screencopy_manager_v1_interface, 1);
+        g_pHyprmag->m_pSCMgr = (zwlr_screencopy_manager_v1*)wl_registry_bind(registry, name, &zwlr_screencopy_manager_v1_interface, 1);
     }
 }
 
@@ -81,7 +81,7 @@ void Events::handleCapabilities(void* data, wl_seat* wl_seat, uint32_t capabilit
         wl_pointer_add_listener(wl_seat_get_pointer(wl_seat), &pointerListener, wl_seat);
     } else {
         Debug::log(CRIT, "Hyprpicker cannot work without a pointer!");
-        g_pHyprpicker->finish(1);
+        g_pHyprmag->finish(1);
     }
 
     if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD) {
@@ -90,11 +90,11 @@ void Events::handleCapabilities(void* data, wl_seat* wl_seat, uint32_t capabilit
 }
 
 void Events::handlePointerEnter(void* data, struct wl_pointer* wl_pointer, uint32_t serial, struct wl_surface* surface, wl_fixed_t surface_x, wl_fixed_t surface_y) {
-    g_pHyprpicker->markDirty();
+    g_pHyprmag->markDirty();
 
-    for (auto& ls : g_pHyprpicker->m_vLayerSurfaces) {
+    for (auto& ls : g_pHyprmag->m_vLayerSurfaces) {
         if (ls->pSurface == surface) {
-            g_pHyprpicker->m_pLastSurface = ls.get();
+            g_pHyprmag->m_pLastSurface = ls.get();
 
             if (!ls->pCursorImg)
                 break;
@@ -108,9 +108,9 @@ void Events::handlePointerEnter(void* data, struct wl_pointer* wl_pointer, uint3
 }
 
 void Events::handlePointerLeave(void* data, struct wl_pointer* wl_pointer, uint32_t serial, struct wl_surface* surface) {
-    for (auto& ls : g_pHyprpicker->m_vLayerSurfaces) {
+    for (auto& ls : g_pHyprmag->m_vLayerSurfaces) {
         if (ls->pSurface == surface) {
-            g_pHyprpicker->renderSurface(ls.get(), true);
+            g_pHyprmag->renderSurface(ls.get(), true);
         }
     }
 }
@@ -123,134 +123,13 @@ void Events::handlePointerMotion(void* data, struct wl_pointer* wl_pointer, uint
     auto x = wl_fixed_to_double(surface_x);
     auto y = wl_fixed_to_double(surface_y);
 
-    g_pHyprpicker->m_vLastCoords = {x, y};
+    g_pHyprmag->m_vLastCoords = {x, y};
 
-    g_pHyprpicker->markDirty();
-}
-
-void Events::handlePointerButton(void* data, struct wl_pointer* wl_pointer, uint32_t serial, uint32_t time, uint32_t button, uint32_t button_state) {
-    auto fmax3 = [](float a, float b, float c) -> float { return (a > b && a > c) ? a : (b > c) ? b : c; };
-    auto fmin3 = [](float a, float b, float c) -> float { return (a < b && a < c) ? a : (b < c) ? b : c; };
-
-    // get the px and print it
-    const auto SCALE = Vector2D{
-        g_pHyprpicker->m_pLastSurface->screenBuffer.pixelSize.x / (g_pHyprpicker->m_pLastSurface->buffers[0].pixelSize.x / g_pHyprpicker->m_pLastSurface->m_pMonitor->scale),
-        g_pHyprpicker->m_pLastSurface->screenBuffer.pixelSize.y / (g_pHyprpicker->m_pLastSurface->buffers[0].pixelSize.y / g_pHyprpicker->m_pLastSurface->m_pMonitor->scale)};
-
-    const auto CLICKPOS = Vector2D{g_pHyprpicker->m_vLastCoords.floor().x * SCALE.x, g_pHyprpicker->m_vLastCoords.floor().y * SCALE.y};
-
-    const auto COL = g_pHyprpicker->getColorFromPixel(g_pHyprpicker->m_pLastSurface, CLICKPOS);
-
-    switch (g_pHyprpicker->m_bSelectedOutputMode) {
-        case OUTPUT_CMYK: {
-            // http://www.codeproject.com/KB/applications/xcmyk.aspx
-
-            float r = 1 - COL.r / 255.0f, g = 1 - COL.g / 255.0f, b = 1 - COL.b / 255.0f;
-            float k = fmin3(r, g, b), K = 1 - k;
-            float c = (r - k) / K, m = (g - k) / K, y = (b - k) / K;
-
-            c = std::round(c * 100);
-            m = std::round(m * 100);
-            y = std::round(y * 100);
-            k = std::round(k * 100);
-
-            if (g_pHyprpicker->m_bFancyOutput)
-                Debug::log(NONE, "\033[38;2;%i;%i;%im%g%% %g%% %g%% %g%%\033[0m", COL.r, COL.g, COL.b, c, m, y, k);
-            else
-                Debug::log(NONE, "%g%% %g%% %g%% %g%%", c, m, y, k);
-
-            if (g_pHyprpicker->m_bAutoCopy)
-                Clipboard::copy("%g%% %g%% %g%% %g%%", c, m, y, k);
-            g_pHyprpicker->finish();
-            break;
-        }
-        case OUTPUT_HEX: {
-            auto toHex = [](int i) -> std::string {
-                const char* DS = "0123456789ABCDEF";
-
-                std::string result = "";
-
-                result += DS[i / 16];
-                result += DS[i % 16];
-
-                return result;
-            };
-
-            if (g_pHyprpicker->m_bFancyOutput)
-                Debug::log(NONE, "\033[38;2;%i;%i;%im#%s%s%s\033[0m", COL.r, COL.g, COL.b, toHex(COL.r).c_str(), toHex(COL.g).c_str(), toHex(COL.b).c_str());
-            else
-                Debug::log(NONE, "#%s%s%s", toHex(COL.r).c_str(), toHex(COL.g).c_str(), toHex(COL.b).c_str());
-
-            if (g_pHyprpicker->m_bAutoCopy)
-                Clipboard::copy("#%s%s%s", toHex(COL.r).c_str(), toHex(COL.g).c_str(), toHex(COL.b).c_str());
-            g_pHyprpicker->finish();
-            break;
-        }
-        case OUTPUT_RGB: {
-            if (g_pHyprpicker->m_bFancyOutput)
-                Debug::log(NONE, "\033[38;2;%i;%i;%im%i %i %i\033[0m", COL.r, COL.g, COL.b, COL.r, COL.g, COL.b);
-            else
-                Debug::log(NONE, "%i %i %i", COL.r, COL.g, COL.b);
-
-            if (g_pHyprpicker->m_bAutoCopy)
-                Clipboard::copy("%i %i %i", COL.r, COL.g, COL.b);
-            g_pHyprpicker->finish();
-            break;
-        }
-        case OUTPUT_HSL:
-        case OUTPUT_HSV: {
-            // https://en.wikipedia.org/wiki/HSL_and_HSV#From_RGB
-
-            auto floatEq = [](float a, float b) -> bool {
-                return std::nextafter(a, std::numeric_limits<double>::lowest()) <= b && std::nextafter(a, std::numeric_limits<double>::max()) >= b;
-            };
-
-            float h, s, l, v;
-            float r = COL.r / 255.0f, g = COL.g / 255.0f, b = COL.b / 255.0f;
-            float max = fmax3(r, g, b), min = fmin3(r, g, b);
-            float c = max - min;
-
-            v = max;
-            if (c == 0)
-                h = 0;
-            else if (v == r)
-                h = 60 * (0 + (g - b) / c);
-            else if (v == g)
-                h = 60 * (2 + (b - r) / c);
-            else /* v == b */
-                h = 60 * (4 + (r - g) / c);
-
-            float l_or_v;
-            if (g_pHyprpicker->m_bSelectedOutputMode == OUTPUT_HSL) {
-                l      = (max + min) / 2;
-                s      = (floatEq(l, 0.0f) || floatEq(l, 1.0f)) ? 0 : (v - l) / std::min(l, 1 - l);
-                l_or_v = std::round(l * 100);
-            } else {
-                v      = max;
-                s      = floatEq(v, 0.0f) ? 0 : c / v;
-                l_or_v = std::round(v * 100);
-            }
-
-            h = std::round(h);
-            s = std::round(s * 100);
-
-            if (g_pHyprpicker->m_bFancyOutput)
-                Debug::log(NONE, "\033[38;2;%i;%i;%im%g %g%% %g%%\033[0m", COL.r, COL.g, COL.b, h, s, l_or_v);
-            else
-                Debug::log(NONE, "%g %g%% %g%%", h, s, l_or_v);
-
-            if (g_pHyprpicker->m_bAutoCopy)
-                Clipboard::copy("%g %g%% %g%%", h, s, l_or_v);
-            g_pHyprpicker->finish();
-            break;
-        }
-    }
-
-    g_pHyprpicker->finish();
+    g_pHyprmag->markDirty();
 }
 
 void Events::handleKeyboardKeymap(void* data, wl_keyboard* wl_keyboard, uint format, int fd, uint size) {
-    if (!g_pHyprpicker->m_pXKBContext)
+    if (!g_pHyprmag->m_pXKBContext)
         return;
 
     if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
@@ -264,18 +143,18 @@ void Events::handleKeyboardKeymap(void* data, wl_keyboard* wl_keyboard, uint for
         return;
     }
 
-    g_pHyprpicker->m_pXKBKeymap = xkb_keymap_new_from_buffer(g_pHyprpicker->m_pXKBContext, buf, size - 1, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+    g_pHyprmag->m_pXKBKeymap = xkb_keymap_new_from_buffer(g_pHyprmag->m_pXKBContext, buf, size - 1, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
 
     munmap((void*)buf, size);
     close(fd);
 
-    if (!g_pHyprpicker->m_pXKBKeymap) {
+    if (!g_pHyprmag->m_pXKBKeymap) {
         Debug::log(ERR, "Failed to compile xkb keymap");
         return;
     }
 
-    g_pHyprpicker->m_pXKBState = xkb_state_new(g_pHyprpicker->m_pXKBKeymap);
-    if (!g_pHyprpicker->m_pXKBState) {
+    g_pHyprmag->m_pXKBState = xkb_state_new(g_pHyprmag->m_pXKBKeymap);
+    if (!g_pHyprmag->m_pXKBState) {
         Debug::log(ERR, "Failed to create xkb state");
         return;
     }
@@ -285,11 +164,11 @@ void Events::handleKeyboardKey(void* data, struct wl_keyboard* keyboard, uint32_
     if (state != WL_KEYBOARD_KEY_STATE_PRESSED)
         return;
 
-    if (g_pHyprpicker->m_pXKBState) {
-        if (xkb_state_key_get_one_sym(g_pHyprpicker->m_pXKBState, key + 8) == XKB_KEY_Escape)
-            g_pHyprpicker->finish();
+    if (g_pHyprmag->m_pXKBState) {
+        if (xkb_state_key_get_one_sym(g_pHyprmag->m_pXKBState, key + 8) == XKB_KEY_Escape)
+            g_pHyprmag->finish();
     } else if (key == 1) // Assume keycode 1 is escape
-        g_pHyprpicker->finish();
+        g_pHyprmag->finish();
 }
 
 void Events::handleKeyboardEnter(void* data, wl_keyboard* wl_keyboard, uint serial, wl_surface* surface, wl_array* keys) {}
@@ -297,10 +176,10 @@ void Events::handleKeyboardEnter(void* data, wl_keyboard* wl_keyboard, uint seri
 void Events::handleKeyboardLeave(void* data, wl_keyboard* wl_keyboard, uint serial, wl_surface* surface) {}
 
 void Events::handleKeyboardModifiers(void* data, wl_keyboard* wl_keyboard, uint serial, uint mods_depressed, uint mods_latched, uint mods_locked, uint group) {
-    if (!g_pHyprpicker->m_pXKBState)
+    if (!g_pHyprmag->m_pXKBState)
         return;
 
-    xkb_state_update_mask(g_pHyprpicker->m_pXKBState, mods_depressed, mods_latched, mods_locked, 0, 0, group);
+    xkb_state_update_mask(g_pHyprmag->m_pXKBState, mods_depressed, mods_latched, mods_locked, 0, 0, group);
 }
 
 void Events::handleFrameDone(void* data, struct wl_callback* callback, uint32_t time) {
@@ -312,7 +191,7 @@ void Events::handleFrameDone(void* data, struct wl_callback* callback, uint32_t 
     pLS->frame_callback = nullptr;
 
     if (pLS->dirty || !pLS->rendered)
-        g_pHyprpicker->renderSurface(g_pHyprpicker->m_pLastSurface);
+        g_pHyprmag->renderSurface(g_pHyprmag->m_pLastSurface);
 }
 
 void Events::handleBufferRelease(void* data, struct wl_buffer* wl_buffer) {
@@ -326,7 +205,7 @@ void Events::handleSCBuffer(void* data, struct zwlr_screencopy_frame_v1* frame, 
     PLS->screenBufferFormat = format;
 
     if (!PLS->screenBuffer.buffer)
-        g_pHyprpicker->createBuffer(&PLS->screenBuffer, width, height, format, stride);
+        g_pHyprmag->createBuffer(&PLS->screenBuffer, width, height, format, stride);
 
     zwlr_screencopy_frame_v1_copy(frame, PLS->screenBuffer.buffer);
 }
@@ -336,7 +215,7 @@ void Events::handleSCFlags(void* data, struct zwlr_screencopy_frame_v1* frame, u
 
     PLS->scflags = flags;
 
-    g_pHyprpicker->recheckACK();
+    g_pHyprmag->recheckACK();
 }
 
 void Events::handleSCReady(void* lsdata, struct zwlr_screencopy_frame_v1* frame, uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec) {
@@ -348,19 +227,19 @@ void Events::handleSCReady(void* lsdata, struct zwlr_screencopy_frame_v1* frame,
     if (PLS->m_pMonitor->transform % 2 == 1)
         std::swap(transformedSize.x, transformedSize.y);
 
-    g_pHyprpicker->createBuffer(&newBuf, transformedSize.x, transformedSize.y, PLS->screenBufferFormat, transformedSize.x * 4);
+    g_pHyprmag->createBuffer(&newBuf, transformedSize.x, transformedSize.y, PLS->screenBufferFormat, transformedSize.x * 4);
 
     int   bytesPerPixel = PLS->screenBuffer.stride / (int)PLS->screenBuffer.pixelSize.x;
     void* data          = PLS->screenBuffer.data;
     if (bytesPerPixel == 4)
-        g_pHyprpicker->convertBuffer(&PLS->screenBuffer);
+        g_pHyprmag->convertBuffer(&PLS->screenBuffer);
     else if (bytesPerPixel == 3) {
         Debug::log(WARN, "24 bit formats are unsupported, hyprpicker may or may not work as intended!");
-        data                         = g_pHyprpicker->convert24To32Buffer(&PLS->screenBuffer);
+        data                         = g_pHyprmag->convert24To32Buffer(&PLS->screenBuffer);
         PLS->screenBuffer.paddedData = data;
     } else {
         Debug::log(CRIT, "Unsupported stride/bytes per pixel %i", bytesPerPixel);
-        g_pHyprpicker->finish(1);
+        g_pHyprmag->finish(1);
     }
 
     cairo_surface_t* oldSurface = cairo_image_surface_create_for_data((unsigned char*)data, CAIRO_FORMAT_ARGB32, PLS->screenBuffer.pixelSize.x, PLS->screenBuffer.pixelSize.y,
@@ -377,8 +256,6 @@ void Events::handleSCReady(void* lsdata, struct zwlr_screencopy_frame_v1* frame,
 
         if (TR == 0)
             return;
-
-        const auto TRFLIP = PLS->m_pMonitor->transform >= 4;
 
         cairo_matrix_rotate(mtx, -M_PI_2 * (double)TR);
 
@@ -417,14 +294,14 @@ void Events::handleSCReady(void* lsdata, struct zwlr_screencopy_frame_v1* frame,
 
     cairo_surface_destroy(oldSurface);
 
-    g_pHyprpicker->destroyBuffer(&PLS->screenBuffer);
+    g_pHyprmag->destroyBuffer(&PLS->screenBuffer);
 
     PLS->screenBuffer = newBuf;
 
-    g_pHyprpicker->renderSurface(PLS);
+    g_pHyprmag->renderSurface(PLS);
 }
 
 void Events::handleSCFailed(void* data, struct zwlr_screencopy_frame_v1* frame) {
     Debug::log(CRIT, "Failed to get a Screencopy!");
-    g_pHyprpicker->finish(1);
+    g_pHyprmag->finish(1);
 }
