@@ -382,7 +382,11 @@ void CHyprmag::renderSurface(CLayerSurface* pSurface, bool forceInactive) {
         cairo_matrix_t matrix;
         cairo_matrix_init_identity(&matrix);
         cairo_matrix_translate(&matrix, CLICKPOS.x + 0.5f, CLICKPOS.y + 0.5f);
-        cairo_matrix_scale(&matrix, 0.4f, 0.4f);
+
+        // the scale is inverted because we want to zoom in
+        const float scale = 1.0f / g_pHyprmag->m_fScale;
+
+        cairo_matrix_scale(&matrix, scale, scale);
         cairo_matrix_translate(&matrix, -CLICKPOS.x / SCALEBUFS.x - 0.5f, -CLICKPOS.y / SCALEBUFS.y - 0.5f);
         cairo_pattern_set_matrix(PATTERN, &matrix);
         cairo_set_source(PCAIRO, PATTERN);

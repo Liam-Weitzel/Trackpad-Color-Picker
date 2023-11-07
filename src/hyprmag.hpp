@@ -23,6 +23,7 @@ class CHyprmag {
 
     bool                                        m_bRenderInactive = false;
     int                                         m_iRadius         = 200;
+    float                                       m_fScale          = 4.0f;
 
     bool                                        m_bRunning = true;
 
