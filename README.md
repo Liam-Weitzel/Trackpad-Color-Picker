@@ -1,26 +1,20 @@
 # hyprmag
 
-A wlroots-compatible Wayland color picker that does not suck.
+A wlroots-compatible Wayland screen magnifier with basic customization options.
 
-![hyprmagShort](https://user-images.githubusercontent.com/43317083/188224867-7d77a3b3-0a66-488c-8019-39b00060ab42.gif)
+![hyprmag screencast](https://user-images.githubusercontent.com/63104422/280996521-71936981-d8b4-45cf-9ad7-07dc16f9b24a.gif)
 
 # Usage
 
-Launch it. Click. That's it.
+Launch it. Move the mouse. That's it.
 
 ## Options
 
-`-f | --format=[fmt]` specifies the output format (`cmyk`, `hex`, `rgb`, `hsl`, `hsv`)
-
-`-n | --no-fancy` disables the "fancy" (aka. colored) outputting
-
 `-h | --help` prints a help message
 
-`-a | --autocopy` automatically copies the output to the clipboard (requires [wl-clipboard](https://github.com/bugaevc/wl-clipboard))
+`-r | --radius` sets the radius of the magnifying lens
 
-`-r | --render-inactive` render (freeze) inactive displays too
-
-`-z | --no-zoom` disable the zoom lens
+`-s | --scale` sets the zoom factor
 
 # Building
 
@@ -34,4 +28,4 @@ the output binary is in `./build/hyprmag`
 
 # Caveats
 
-"Freezes" your displays when picking the color.
+"Freezes" your displays while magnifying.
