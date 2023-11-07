@@ -130,7 +130,7 @@ int CHyprmag::createPoolFile(size_t size, std::string& name) {
         g_pHyprmag->finish(1);
     }
 
-    name = std::string(XDGRUNTIMEDIR) + "/.hyprpicker_XXXXXX";
+    name = std::string(XDGRUNTIMEDIR) + "/.hyprmag_XXXXXX";
 
     const auto FD = mkstemp((char*)name.c_str());
     if (FD < 0) {

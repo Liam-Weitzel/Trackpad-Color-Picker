@@ -80,7 +80,7 @@ void Events::handleCapabilities(void* data, wl_seat* wl_seat, uint32_t capabilit
     if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
         wl_pointer_add_listener(wl_seat_get_pointer(wl_seat), &pointerListener, wl_seat);
     } else {
-        Debug::log(CRIT, "Hyprpicker cannot work without a pointer!");
+        Debug::log(CRIT, "Hyprmag cannot work without a pointer!");
         g_pHyprmag->finish(1);
     }
 
@@ -228,7 +228,7 @@ void Events::handleSCReady(void* lsdata, struct zwlr_screencopy_frame_v1* frame,
     if (bytesPerPixel == 4)
         g_pHyprmag->convertBuffer(&PLS->screenBuffer);
     else if (bytesPerPixel == 3) {
-        Debug::log(WARN, "24 bit formats are unsupported, hyprpicker may or may not work as intended!");
+        Debug::log(WARN, "24 bit formats are unsupported, hyprmag may or may not work as intended!");
         data                         = g_pHyprmag->convert24To32Buffer(&PLS->screenBuffer);
         PLS->screenBuffer.paddedData = data;
     } else {
