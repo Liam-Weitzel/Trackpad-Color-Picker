@@ -84,7 +84,7 @@ stdenv.mkDerivation {
 
   meta = with lib; {
     homepage = "https://github.com/SIMULATAN/hyprmag";
-    description = "A wlroots-compatible Wayland color picker that does not suck";
+    description = "A wlroots-compatible Wayland screen magnifier with basic customization options.";
     license = licenses.bsd3;
     platforms = platforms.linux;
   };
