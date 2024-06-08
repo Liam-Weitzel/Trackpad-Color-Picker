@@ -31,4 +31,6 @@ class CLayerSurface {
     bool                   rendered = false;
 
     wl_callback*           frame_callback = nullptr;
+
+    wl_cursor_image*       pCursorImg = nullptr;
 };

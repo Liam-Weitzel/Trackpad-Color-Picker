@@ -3,10 +3,10 @@
   stdenv,
   pkg-config,
   cmake,
-  ninja,
   cairo,
   fribidi,
   libdatrie,
+  libGL,
   libjpeg,
   libselinux,
   libsepol,
@@ -14,11 +14,11 @@
   libxkbcommon,
   pango,
   pcre,
+  pcre2,
   utillinux,
   wayland,
   wayland-protocols,
   wayland-scanner,
-  wlroots,
   libXdmcp,
   debug ? false,
   version ? "git",
@@ -26,13 +26,16 @@
 stdenv.mkDerivation {
   pname = "hyprmag" + lib.optionalString debug "-debug";
   inherit version;
+
   src = ../.;
 
-  cmakeFlags = lib.optional debug "-DCMAKE_BUILD_TYPE=Debug";
+  cmakeBuildType =
+    if debug
+    then "Debug"
+    else "Release";
 
   nativeBuildInputs = [
     cmake
-    ninja
     pkg-config
   ];
 
@@ -40,52 +43,32 @@ stdenv.mkDerivation {
     cairo
     fribidi
     libdatrie
+    libGL
     libjpeg
     libselinux
     libsepol
     libthai
     pango
     pcre
+    pcre2
     wayland
     wayland-protocols
     wayland-scanner
-    wlroots
     libXdmcp
     libxkbcommon
     utillinux
   ];
 
-  configurePhase = ''
-    runHook preConfigure
-
-    make protocols
-
-    runHook postConfigure
-  '';
-
-  buildPhase = ''
-    runHook preBuild
-
-    make release
-
-    runHook postBuild
-  '';
-
-  installPhase = ''
-    runHook preInstall
-
-    mkdir -p $out/{bin,share/licenses}
-
-    install -Dm755 build/hyprmag -t $out/bin
-    install -Dm644 LICENSE -t $out/share/licenses/hyprmag
-
-    runHook postInstall
-  '';
+  outputs = [
+    "out"
+    "man"
+  ];
 
   meta = with lib; {
     homepage = "https://github.com/SIMULATAN/hyprmag";
     description = "A wlroots-compatible Wayland screen magnifier with basic customization options.";
     license = licenses.bsd3;
     platforms = platforms.linux;
+    mainProgram = "hyprmag";
   };
 }

@@ -22,9 +22,19 @@ Launch it. Move the mouse. That's it.
 `yay -S hyprmag-git`
 
 ## Manual
-`make all`
 
-the output binary is in `./build/hyprmag`
+Building is done via CMake:
+
+```sh
+cmake --no-warn-unused-cli -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr -S . -B ./build
+cmake --build ./build --config Release --target hyprmag -j`nproc 2>/dev/null || getconf _NPROCESSORS_CONF`
+```
+
+Install with:
+
+```sh
+cmake --install ./build
+```
 
 # Caveats
 

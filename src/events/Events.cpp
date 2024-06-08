@@ -69,6 +69,8 @@ void Events::handleGlobal(void* data, struct wl_registry* registry, uint32_t nam
         g_pHyprmag->createSeat((wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, 1));
     } else if (strcmp(interface, zwlr_screencopy_manager_v1_interface.name) == 0) {
         g_pHyprmag->m_pSCMgr = (zwlr_screencopy_manager_v1*)wl_registry_bind(registry, name, &zwlr_screencopy_manager_v1_interface, 1);
+    } else if (strcmp(interface, wp_cursor_shape_manager_v1_interface.name) == 0) {
+        g_pHyprmag->m_pCursorShape = (wp_cursor_shape_manager_v1*)wl_registry_bind(registry, name, &wp_cursor_shape_manager_v1_interface, 1);
     }
 }
 
@@ -78,7 +80,9 @@ void Events::handleGlobalRemove(void* data, struct wl_registry* registry, uint32
 
 void Events::handleCapabilities(void* data, wl_seat* wl_seat, uint32_t capabilities) {
     if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
-        wl_pointer_add_listener(wl_seat_get_pointer(wl_seat), &pointerListener, wl_seat);
+        const auto POINTER = wl_seat_get_pointer(wl_seat);
+        wl_pointer_add_listener(POINTER, &pointerListener, wl_seat);
+        g_pHyprmag->m_pCursorShapeDevice = wp_cursor_shape_manager_v1_get_pointer(g_pHyprmag->m_pCursorShape, POINTER);
     } else {
         Debug::log(CRIT, "Hyprmag cannot work without a pointer!");
         g_pHyprmag->finish(1);
@@ -96,7 +100,15 @@ void Events::handlePointerEnter(void* data, struct wl_pointer* wl_pointer, uint3
     for (auto& ls : g_pHyprmag->m_vLayerSurfaces) {
         if (ls->pSurface == surface) {
             g_pHyprmag->m_pLastSurface = ls.get();
-            break;
+
+            if (!ls->pCursorImg)
+                break;
+
+            // wl_surface_set_buffer_scale(ls->pCursorSurface, ls->m_pMonitor->scale);
+            // wl_surface_attach(ls->pCursorSurface, wl_cursor_image_get_buffer(ls->pCursorImg), 0, 0);
+            // wl_pointer_set_cursor(wl_pointer, serial, ls->pCursorSurface, ls->pCursorImg->hotspot_x / ls->m_pMonitor->scale, ls->pCursorImg->hotspot_y / ls->m_pMonitor->scale);
+            // wl_surface_commit(ls->pCursorSurface);
+            wp_cursor_shape_device_v1_set_shape(g_pHyprmag->m_pCursorShapeDevice, serial, WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CROSSHAIR);
         }
     }
 }

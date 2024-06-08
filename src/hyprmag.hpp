@@ -10,12 +10,14 @@ class CHyprmag {
 
     std::mutex                                  m_mtTickMutex;
 
-    wl_compositor*                              m_pCompositor;
-    wl_display*                                 m_pWLDisplay;
-    wl_registry*                                m_pWLRegistry;
-    wl_shm*                                     m_pWLSHM;
-    zwlr_layer_shell_v1*                        m_pLayerShell;
-    zwlr_screencopy_manager_v1*                 m_pSCMgr;
+    wl_compositor*                              m_pCompositor        = nullptr;
+    wl_display*                                 m_pWLDisplay         = nullptr;
+    wl_registry*                                m_pWLRegistry        = nullptr;
+    wl_shm*                                     m_pWLSHM             = nullptr;
+    zwlr_layer_shell_v1*                        m_pLayerShell        = nullptr;
+    zwlr_screencopy_manager_v1*                 m_pSCMgr             = nullptr;
+    wp_cursor_shape_manager_v1*                 m_pCursorShape       = nullptr;
+    wp_cursor_shape_device_v1*                  m_pCursorShapeDevice = nullptr;
 
     xkb_context*                                m_pXKBContext = nullptr;
     xkb_keymap*                                 m_pXKBKeymap  = nullptr;
