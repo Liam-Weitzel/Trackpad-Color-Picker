@@ -97,6 +97,8 @@ void Events::handlePointerEnter(void* data, struct wl_pointer* wl_pointer, uint3
     g_pHyprmag->markDirty();
     wl_pointer_set_cursor(wl_pointer, 0, nullptr, 0, 0);
 
+    g_pHyprmag->m_vLastCoords = {wl_fixed_to_double(surface_x), wl_fixed_to_double(surface_y)};
+
     for (auto& ls : g_pHyprmag->m_vLayerSurfaces) {
         if (ls->pSurface == surface) {
             g_pHyprmag->m_pLastSurface = ls.get();
@@ -111,6 +113,7 @@ void Events::handlePointerEnter(void* data, struct wl_pointer* wl_pointer, uint3
             wp_cursor_shape_device_v1_set_shape(g_pHyprmag->m_pCursorShapeDevice, serial, WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CROSSHAIR);
         }
     }
+    g_pHyprmag->renderSurface(g_pHyprmag->m_pLastSurface);
 }
 
 void Events::handlePointerLeave(void* data, struct wl_pointer* wl_pointer, uint32_t serial, struct wl_surface* surface) {
