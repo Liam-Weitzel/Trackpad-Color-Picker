@@ -61,6 +61,27 @@ void CHyprmag::handlePinchBegin(struct libinput_event_gesture* event) {
     m_gestureState.finger_count = libinput_event_gesture_get_finger_count(event);
 }
 
+float CHyprmag::getTargetScale(float monitor_scale) {
+    // Find the two closest values and interpolate between them
+    for (size_t i = 0; i < SCALE_MAP.size() - 1; i++) {
+        if (monitor_scale >= SCALE_MAP[i].monitor_scale && 
+            monitor_scale <= SCALE_MAP[i + 1].monitor_scale) {
+            
+            float t = (monitor_scale - SCALE_MAP[i].monitor_scale) / 
+                     (SCALE_MAP[i + 1].monitor_scale - SCALE_MAP[i].monitor_scale);
+            
+            return SCALE_MAP[i].target_scale + 
+                   t * (SCALE_MAP[i + 1].target_scale - SCALE_MAP[i].target_scale);
+        }
+    }
+    
+    // Return closest value if outside range
+    if (monitor_scale < SCALE_MAP.front().monitor_scale) {
+        return SCALE_MAP.front().target_scale;
+    }
+    return SCALE_MAP.back().target_scale;
+}
+
 void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
     if (!m_gestureState.active) return;
     
@@ -72,22 +93,37 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
     lastUpdate = now;
 
     float scale = libinput_event_gesture_get_scale(event);
+    
+    // Calculate actual fractional scale from buffer sizes
+    float monitor_scale = (float)m_pLastSurface->screenBuffer.pixelSize.x / (float)m_pLastSurface->m_pMonitor->size.x;
+    float target_exit_scale = getTargetScale(monitor_scale);
+    
     float target_scale = m_gestureState.initial_scale * scale;
     
-    target_scale = std::max(0.5f, std::min(10.0f, target_scale));
+    target_scale = std::max(1.0f, std::min(10.0f, target_scale));
     
     // Smooth interpolation
-    float alpha = 0.3f; // Adjust this value to control smoothing (0-1)
+    float alpha = 0.3f;
     float new_scale = m_fScale + (target_scale - m_fScale) * alpha;
+    
+    // Print the actual fractional scale
+    std::cout << "Actual monitor scale: " << monitor_scale << std::endl;
+    std::cout << "Target exit scale: " << target_exit_scale << std::endl;
+    std::cout << "New scale scale: " << new_scale << std::endl;
+    
+    if (new_scale - target_exit_scale < 0.01f) {
+        g_pHyprmag->finish();
+    }
     
     if (std::abs(new_scale - m_fScale) > 0.001f) {
         m_fScale = new_scale;
         
-        // Force redraw cycle
-        if (m_pLastSurface) {
+        if (m_pLastSurface && m_pLastSurface->pSurface) {
             m_pLastSurface->rendered = false;
             renderSurface(m_pLastSurface);
-            wl_display_flush(m_pWLDisplay);
+            if (m_pWLDisplay) {
+                wl_display_flush(m_pWLDisplay);
+            }
         }
     }
 }

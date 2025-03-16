@@ -25,6 +25,20 @@ void Events::scale(void* data, wl_output* wl_output, int32_t scale) {
     PMONITOR->scale = scale;
 }
 
+void Events::handleXDGOutputLogicalSize(void* data, struct zxdg_output_v1* output, int32_t width, int32_t height) {
+    const auto PMONITOR = (SMonitor*)data;
+    
+    // The logical size compared to the physical size gives us the actual scale
+    if (PMONITOR->size.x > 0 && width > 0) {
+        PMONITOR->scale = (float)PMONITOR->size.x / (float)width;
+    }
+}
+
+void Events::handleXDGOutputLogicalPosition(void* data, struct zxdg_output_v1* output, int32_t x, int32_t y) {}
+void Events::handleXDGOutputDone(void* data, struct zxdg_output_v1* output) {}
+void Events::handleXDGOutputName(void* data, struct zxdg_output_v1* output, const char* name) {}
+void Events::handleXDGOutputDescription(void* data, struct zxdg_output_v1* output, const char* description) {}
+
 void Events::name(void* data, wl_output* wl_output, const char* name) {
     const auto PMONITOR = (SMonitor*)data;
 
@@ -49,7 +63,11 @@ void Events::ls_configure(void* data, zwlr_layer_surface_v1* surface, uint32_t s
 }
 
 void Events::handleGlobal(void* data, struct wl_registry* registry, uint32_t name, const char* interface, uint32_t version) {
-    if (strcmp(interface, wl_compositor_interface.name) == 0) {
+    if (strcmp(interface, zxdg_output_manager_v1_interface.name) == 0) {
+        g_pHyprmag->m_pXDGOutputMgr = (zxdg_output_manager_v1*)wl_registry_bind(
+            registry, name, &zxdg_output_manager_v1_interface, 
+            version > 2 ? 2 : version);
+    } else if (strcmp(interface, wl_compositor_interface.name) == 0) {
         g_pHyprmag->m_pCompositor = (wl_compositor*)wl_registry_bind(registry, name, &wl_compositor_interface, 4);
     } else if (strcmp(interface, wl_shm_interface.name) == 0) {
         g_pHyprmag->m_pWLSHM = (wl_shm*)wl_registry_bind(registry, name, &wl_shm_interface, 1);
@@ -61,6 +79,12 @@ void Events::handleGlobal(void* data, struct wl_registry* registry, uint32_t nam
         PMONITOR->name         = "";
         PMONITOR->output       = (wl_output*)wl_registry_bind(registry, name, &wl_output_interface, 4);
         wl_output_add_listener(PMONITOR->output, &Events::outputListener, PMONITOR);
+
+        if (g_pHyprmag->m_pXDGOutputMgr) {
+            auto xdg_output = zxdg_output_manager_v1_get_xdg_output(
+                g_pHyprmag->m_pXDGOutputMgr, PMONITOR->output);
+            zxdg_output_v1_add_listener(xdg_output, &Events::xdgOutputListener, PMONITOR);
+        }
 
         g_pHyprmag->m_mtTickMutex.unlock();
     } else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {

@@ -9,7 +9,21 @@ namespace Events {
 
     void done(void *data, wl_output *wl_output);
 
-    void scale(void *data, wl_output *wl_output, int32_t scale);
+    void handleXDGOutputLogicalPosition(void* data, struct zxdg_output_v1* output, int32_t x, int32_t y);
+    void handleXDGOutputLogicalSize(void* data, struct zxdg_output_v1* output, int32_t width, int32_t height);
+    void handleXDGOutputDone(void* data, struct zxdg_output_v1* output);
+    void handleXDGOutputName(void* data, struct zxdg_output_v1* output, const char* name);
+    void handleXDGOutputDescription(void* data, struct zxdg_output_v1* output, const char* description);
+
+    inline const struct zxdg_output_v1_listener xdgOutputListener = {
+        .logical_position = handleXDGOutputLogicalPosition,
+        .logical_size = handleXDGOutputLogicalSize,
+        .done = handleXDGOutputDone,
+        .name = handleXDGOutputName,
+        .description = handleXDGOutputDescription,
+    };
+
+    void scale(void *data, wl_output *wl_output, int scale);
 
     void name(void *data, wl_output *wl_output, const char *name);
 

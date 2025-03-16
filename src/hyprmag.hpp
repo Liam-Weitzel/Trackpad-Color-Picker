@@ -13,11 +13,34 @@ struct GestureState {
     uint32_t finger_count = 0;
 };
 
+struct ScalePair {
+    float monitor_scale;
+    float target_scale;
+};
+
+// Ordered by monitor_scale
+const std::vector<ScalePair> SCALE_MAP = {
+    {0.5f, 2.0f},
+    {0.6f, 1.66f},
+    {0.7f, 1.41f},
+    {0.9f, 1.1f},
+    {1.1f, 1.8f},
+    {1.2f, 1.6f},
+    {1.3f, 1.55f},
+    {1.5f, 1.32f},
+    {1.7f, 1.2f},
+    {2.1f, 1.44f},
+    {2.8f, 1.0f}
+};
+
+
 class CHyprmag {
   public:
     void                                        init();
 
+    struct wp_fractional_scale_manager_v1* m_pFractionalScaleMgr = nullptr;
     std::mutex                                  m_mtTickMutex;
+    zxdg_output_manager_v1* m_pXDGOutputMgr = nullptr;
 
     wl_compositor*                              m_pCompositor        = nullptr;
     wl_display*                                 m_pWLDisplay         = nullptr;
@@ -72,6 +95,7 @@ class CHyprmag {
 
     // Add new methods for gesture handling
     void handlePinchBegin(struct libinput_event_gesture* event);
+    float getTargetScale(float monitor_scale);
     void handlePinchUpdate(struct libinput_event_gesture* event);
     void handlePinchEnd(struct libinput_event_gesture* event);
     void processLibinputEvents();
