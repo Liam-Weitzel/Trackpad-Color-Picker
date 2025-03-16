@@ -59,7 +59,6 @@ void CHyprmag::processLibinputEvents() {
 void CHyprmag::handlePinchBegin(struct libinput_event_gesture* event) {
     if (m_bMagnifierActive)
         return;
-        
     m_bMagnifierActive = true;
 
     if(!m_bFirstLoad) {
@@ -70,7 +69,6 @@ void CHyprmag::handlePinchBegin(struct libinput_event_gesture* event) {
         wl_registry_add_listener(m_pWLRegistry, &Events::registryListener, nullptr);
 
         wl_display_roundtrip(m_pWLDisplay);
-        wl_display_roundtrip(m_pWLDisplay); // Second roundtrip to ensure all globals are bound
     }
     
     for (auto& m : m_vMonitors) {
@@ -129,7 +127,7 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
     
     float target_scale = m_fScale * scale;
     
-    target_scale = std::max(1.0f, std::min(5.0f, target_scale));
+    target_scale = std::max(1.0f, std::min(7.0f, target_scale));
     
     // Smooth interpolation
     float alpha = 0.3f;
@@ -137,8 +135,9 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
 
     if (new_scale - m_targetExitScale < 0.0f) {
         finish();
+        return;
     }
-    
+
     if (std::abs(new_scale - m_fScale) > 0.001f) {
         m_fScale = new_scale;
         
@@ -152,8 +151,7 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
     }
 }
 
-void CHyprmag::handlePinchEnd(struct libinput_event_gesture* event) {
-}
+void CHyprmag::handlePinchEnd(struct libinput_event_gesture* event) {}
 
 void CHyprmag::init() {
 
@@ -235,7 +233,7 @@ void CHyprmag::init() {
         if (m_bToClear) {
 
             m_iUseCount++;
-            
+
             if (m_iUseCount >= MAX_USES_BEFORE_RESTART) {
                 Debug::log(LOG, "Reached max uses (%d), restarting process...", MAX_USES_BEFORE_RESTART);
                 
@@ -259,16 +257,19 @@ void CHyprmag::init() {
                 }
                 return;
             }
+
+            wl_display_roundtrip(m_pWLDisplay);
+            wl_display_roundtrip(m_pWLDisplay);
     
             Debug::log(LOG, "Cleanup #%d", m_iUseCount);
             m_bMagnifierActive = false;
             m_pLastSurface = nullptr;
-            
+
             // Clear layer surfaces one at a time
             while (!m_vLayerSurfaces.empty()) {
                 m_vLayerSurfaces.pop_back();
             }
-            
+
             // Reset monitor state
             for (auto& m : m_vMonitors) {
                 if (m && m->pSCFrame) {
@@ -277,7 +278,6 @@ void CHyprmag::init() {
                 }
             }
             
-            wl_display_roundtrip(m_pWLDisplay);
             m_bToClear = false;
         }
     }
