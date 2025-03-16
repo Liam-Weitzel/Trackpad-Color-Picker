@@ -54,7 +54,7 @@ class CHyprmag {
     xkb_state*                                  m_pXKBState   = nullptr;
 
     bool                                        m_bRenderInactive = false;
-    int                                         m_iRadius         = 200;
+    int                                         m_iRadius         = 300;
     float                                       m_fScale          = 4.0f;
     float                                       m_targetExitScale = 1.0f;
 

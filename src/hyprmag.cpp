@@ -129,7 +129,7 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
     
     float target_scale = m_fScale * scale;
     
-    target_scale = std::max(1.0f, std::min(10.0f, target_scale));
+    target_scale = std::max(1.0f, std::min(5.0f, target_scale));
     
     // Smooth interpolation
     float alpha = 0.3f;
