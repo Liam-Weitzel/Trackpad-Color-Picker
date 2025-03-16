@@ -34,13 +34,32 @@ CLayerSurface::CLayerSurface(SMonitor* pMonitor) {
 }
 
 CLayerSurface::~CLayerSurface() {
-    wl_surface_destroy(pSurface);
-    zwlr_layer_surface_v1_destroy(pLayerSurface);
+    // First destroy any frame callbacks
+    if (frame_callback) {
+        wl_callback_destroy(frame_callback);
+        frame_callback = nullptr;
+    }
 
-    if (g_pHyprmag->m_pWLDisplay)
+    // Then destroy the layer surface role
+    if (pLayerSurface) {
+        zwlr_layer_surface_v1_destroy(pLayerSurface);
+        pLayerSurface = nullptr;
+    }
+
+    // Then destroy the surface
+    if (pSurface) {
+        wl_surface_destroy(pSurface);
+        pSurface = nullptr;
+    }
+
+    // Finally destroy buffers
+    if (g_pHyprmag) {
+        g_pHyprmag->destroyBuffer(&buffers[0]);
+        g_pHyprmag->destroyBuffer(&buffers[1]);
+        g_pHyprmag->destroyBuffer(&screenBuffer);
+    }
+
+    if (g_pHyprmag && g_pHyprmag->m_pWLDisplay) {
         wl_display_flush(g_pHyprmag->m_pWLDisplay);
-
-    g_pHyprmag->destroyBuffer(&buffers[0]);
-    g_pHyprmag->destroyBuffer(&buffers[1]);
-    g_pHyprmag->destroyBuffer(&screenBuffer);
+    }
 }

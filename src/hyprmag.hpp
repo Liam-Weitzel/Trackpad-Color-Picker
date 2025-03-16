@@ -30,6 +30,11 @@ const std::vector<ScalePair> SCALE_MAP = {
 class CHyprmag {
   public:
     void                                        init();
+    bool m_bMagnifierActive = false;
+    bool m_bToClear = false;
+    int m_iUseCount = 0;
+    bool m_bFirstLoad = true;
+    static const int MAX_USES_BEFORE_RESTART = 5;
 
     struct wp_fractional_scale_manager_v1* m_pFractionalScaleMgr = nullptr;
     std::mutex                                  m_mtTickMutex;
@@ -88,7 +93,9 @@ class CHyprmag {
 
     // Add new methods for gesture handling
     float getTargetScale(float monitor_scale);
+    void handlePinchBegin(struct libinput_event_gesture* event);
     void handlePinchUpdate(struct libinput_event_gesture* event);
+    void handlePinchEnd(struct libinput_event_gesture* event);
     void processLibinputEvents();
   private:
 };

@@ -33,9 +33,19 @@ void CHyprmag::processLibinputEvents() {
         auto type = libinput_event_get_type(event);
         
         switch (type) {
+            case LIBINPUT_EVENT_GESTURE_PINCH_BEGIN: {
+                auto gesture = libinput_event_get_gesture_event(event);
+                handlePinchBegin(gesture);
+                break;
+            }
             case LIBINPUT_EVENT_GESTURE_PINCH_UPDATE: {
                 auto gesture = libinput_event_get_gesture_event(event);
                 handlePinchUpdate(gesture);
+                break;
+            }
+            case LIBINPUT_EVENT_GESTURE_PINCH_END: {
+                auto gesture = libinput_event_get_gesture_event(event);
+                handlePinchEnd(gesture);
                 break;
             }
             default:
@@ -43,6 +53,46 @@ void CHyprmag::processLibinputEvents() {
         }
         
         libinput_event_destroy(event);
+    }
+}
+
+void CHyprmag::handlePinchBegin(struct libinput_event_gesture* event) {
+    if (m_bMagnifierActive)
+        return;
+        
+    m_bMagnifierActive = true;
+
+    if(!m_bFirstLoad) {
+        signal(SIGTERM, sigHandler);
+
+        m_pWLRegistry = wl_display_get_registry(m_pWLDisplay);
+
+        wl_registry_add_listener(m_pWLRegistry, &Events::registryListener, nullptr);
+
+        wl_display_roundtrip(m_pWLDisplay);
+        wl_display_roundtrip(m_pWLDisplay); // Second roundtrip to ensure all globals are bound
+    }
+    
+    for (auto& m : m_vMonitors) {
+        m_vLayerSurfaces.emplace_back(std::make_unique<CLayerSurface>(m.get()));
+
+        m_pLastSurface = m_vLayerSurfaces.back().get();
+
+        m->pSCFrame = zwlr_screencopy_manager_v1_capture_output(m_pSCMgr, false, m->output);
+
+        zwlr_screencopy_frame_v1_add_listener(m->pSCFrame, &Events::screencopyListener, m_pLastSurface);
+    }
+
+    wl_display_roundtrip(m_pWLDisplay);
+
+    float monitor_scale = (float)m_pLastSurface->screenBuffer.pixelSize.x / (float)m_pLastSurface->m_pMonitor->size.x;
+    m_targetExitScale = getTargetScale(monitor_scale);
+    m_fScale = m_targetExitScale + 0.001f;
+    
+    // Render surfaces
+    for (auto& ls : m_vLayerSurfaces) {
+        ls->rendered = false;
+        renderSurface(ls.get());
     }
 }
 
@@ -102,7 +152,11 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
     }
 }
 
+void CHyprmag::handlePinchEnd(struct libinput_event_gesture* event) {
+}
+
 void CHyprmag::init() {
+
     m_pXKBContext = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
     if (!m_pXKBContext)
         Debug::log(ERR, "Failed to create xkb context");
@@ -135,30 +189,17 @@ void CHyprmag::init() {
         return;
     }
 
-    signal(SIGTERM, sigHandler);
+    if(m_bFirstLoad) {
+        signal(SIGTERM, sigHandler);
 
-    m_pWLRegistry = wl_display_get_registry(m_pWLDisplay);
+        m_pWLRegistry = wl_display_get_registry(m_pWLDisplay);
 
-    wl_registry_add_listener(m_pWLRegistry, &Events::registryListener, nullptr);
+        wl_registry_add_listener(m_pWLRegistry, &Events::registryListener, nullptr);
 
-    wl_display_roundtrip(m_pWLDisplay);
-    wl_display_roundtrip(m_pWLDisplay); // Second roundtrip to ensure all globals are bound
-
-    for (auto& m : m_vMonitors) {
-        m_vLayerSurfaces.emplace_back(std::make_unique<CLayerSurface>(m.get()));
-
-        m_pLastSurface = m_vLayerSurfaces.back().get();
-
-        m->pSCFrame = zwlr_screencopy_manager_v1_capture_output(m_pSCMgr, false, m->output);
-
-        zwlr_screencopy_frame_v1_add_listener(m->pSCFrame, &Events::screencopyListener, m_pLastSurface);
+        wl_display_roundtrip(m_pWLDisplay);
+        wl_display_roundtrip(m_pWLDisplay); // Second roundtrip to ensure all globals are bound
+        m_bFirstLoad = false;
     }
-
-    wl_display_roundtrip(m_pWLDisplay);
-
-    float monitor_scale = (float)m_pLastSurface->screenBuffer.pixelSize.x / (float)m_pLastSurface->m_pMonitor->size.x;
-    m_targetExitScale = getTargetScale(monitor_scale);
-    m_fScale = m_targetExitScale + 0.001f;
 
     while (m_bRunning) {
         // Process any pending libinput events
@@ -191,26 +232,65 @@ void CHyprmag::init() {
 
         // Ensure the display is flushed
         wl_display_flush(m_pWLDisplay);
+        if (m_bToClear) {
+
+            m_iUseCount++;
+            
+            if (m_iUseCount >= MAX_USES_BEFORE_RESTART) {
+                Debug::log(LOG, "Reached max uses (%d), restarting process...", MAX_USES_BEFORE_RESTART);
+                
+                // Get the current executable path
+                char exe[PATH_MAX];
+                ssize_t len = readlink("/proc/self/exe", exe, sizeof(exe)-1);
+                if (len != -1) {
+                    exe[len] = '\0';
+                    
+                    // Fork and exec a new instance
+                    pid_t pid = fork();
+                    if (pid == 0) {
+                        // Child process
+                        execl(exe, exe, nullptr);
+                        exit(1); // Only reached if execl fails
+                    } else if (pid > 0) {
+                        // Parent process
+                        Debug::log(LOG, "Started new instance, exiting current one");
+                        exit(0);
+                    }
+                }
+                return;
+            }
+    
+            Debug::log(LOG, "Cleanup #%d", m_iUseCount);
+            m_bMagnifierActive = false;
+            m_pLastSurface = nullptr;
+            
+            // Clear layer surfaces one at a time
+            while (!m_vLayerSurfaces.empty()) {
+                m_vLayerSurfaces.pop_back();
+            }
+            
+            // Reset monitor state
+            for (auto& m : m_vMonitors) {
+                if (m && m->pSCFrame) {
+                    zwlr_screencopy_frame_v1_destroy(m->pSCFrame);
+                    m->pSCFrame = nullptr;
+                }
+            }
+            
+            wl_display_roundtrip(m_pWLDisplay);
+            m_bToClear = false;
+        }
     }
 
     finish();
+    exit(0);
 }
 
 void CHyprmag::finish(int code) {
-    m_bRunning = false;
-    m_vLayerSurfaces.clear();
-
-    if (m_pWLDisplay) {
-        wl_display_disconnect(m_pWLDisplay);
-        m_pWLDisplay = nullptr;
+    if (m_bMagnifierActive) {
+        m_bMagnifierActive = false;
+        m_bToClear = true;
     }
-
-    if (m_pLibinput) {
-        libinput_unref(m_pLibinput);
-        m_pLibinput = nullptr;
-    }
-
-    exit(code);
 }
 
 void CHyprmag::recheckACK() {
