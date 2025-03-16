@@ -8,9 +8,6 @@
 
 struct GestureState {
     bool active = false;
-    float initial_scale = 1.0f;
-    float current_scale = 1.0f;
-    uint32_t finger_count = 0;
 };
 
 struct ScalePair {

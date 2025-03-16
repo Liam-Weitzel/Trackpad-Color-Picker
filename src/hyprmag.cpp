@@ -57,8 +57,6 @@ void CHyprmag::processLibinputEvents() {
 
 void CHyprmag::handlePinchBegin(struct libinput_event_gesture* event) {
     m_gestureState.active = true;
-    m_gestureState.initial_scale = m_fScale;
-    m_gestureState.finger_count = libinput_event_gesture_get_finger_count(event);
 }
 
 float CHyprmag::getTargetScale(float monitor_scale) {
@@ -98,7 +96,7 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
     float monitor_scale = (float)m_pLastSurface->screenBuffer.pixelSize.x / (float)m_pLastSurface->m_pMonitor->size.x;
     float target_exit_scale = getTargetScale(monitor_scale);
     
-    float target_scale = m_gestureState.initial_scale * scale;
+    float target_scale = m_fScale * scale;
     
     target_scale = std::max(1.0f, std::min(10.0f, target_scale));
     
@@ -106,12 +104,7 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
     float alpha = 0.3f;
     float new_scale = m_fScale + (target_scale - m_fScale) * alpha;
     
-    // Print the actual fractional scale
-    std::cout << "Actual monitor scale: " << monitor_scale << std::endl;
-    std::cout << "Target exit scale: " << target_exit_scale << std::endl;
-    std::cout << "New scale scale: " << new_scale << std::endl;
-    
-    if (new_scale - target_exit_scale < 0.01f) {
+    if (new_scale - target_exit_scale < 0.0f) {
         g_pHyprmag->finish();
     }
     
@@ -130,7 +123,6 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
 
 void CHyprmag::handlePinchEnd(struct libinput_event_gesture* event) {
     m_gestureState.active = false;
-    m_gestureState.finger_count = 0;
 }
 
 void CHyprmag::init() {
@@ -192,6 +184,11 @@ void CHyprmag::init() {
     }
 
     wl_display_roundtrip(m_pWLDisplay);
+
+    float monitor_scale = (float)m_pLastSurface->screenBuffer.pixelSize.x / (float)m_pLastSurface->m_pMonitor->size.x;
+    float target_exit_scale = getTargetScale(monitor_scale);
+    m_fScale = target_exit_scale + 0.001f;
+
 
     while (m_bRunning && wl_display_dispatch(m_pWLDisplay) != -1) {
         //renderSurface(m_pLastSurface);
