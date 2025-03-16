@@ -1,5 +1,6 @@
 #include "hyprmag.hpp"
 #include <signal.h>
+#include <poll.h>
 #include "events/Events.hpp"
 #include <fcntl.h>
 #include <libinput.h>
@@ -105,7 +106,7 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
     float new_scale = m_fScale + (target_scale - m_fScale) * alpha;
     
     if (new_scale - target_exit_scale < 0.0f) {
-        g_pHyprmag->finish();
+        finish();
     }
     
     if (std::abs(new_scale - m_fScale) > 0.001f) {
@@ -158,13 +159,6 @@ void CHyprmag::init() {
         return;
     }
 
-    std::thread([this]() {
-        while (m_bRunning) {
-            processLibinputEvents();
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
-    }).detach();
-
     signal(SIGTERM, sigHandler);
 
     m_pWLRegistry = wl_display_get_registry(m_pWLDisplay);
@@ -172,6 +166,7 @@ void CHyprmag::init() {
     wl_registry_add_listener(m_pWLRegistry, &Events::registryListener, nullptr);
 
     wl_display_roundtrip(m_pWLDisplay);
+    wl_display_roundtrip(m_pWLDisplay); // Second roundtrip to ensure all globals are bound
 
     for (auto& m : m_vMonitors) {
         m_vLayerSurfaces.emplace_back(std::make_unique<CLayerSurface>(m.get()));
@@ -189,18 +184,44 @@ void CHyprmag::init() {
     float target_exit_scale = getTargetScale(monitor_scale);
     m_fScale = target_exit_scale + 0.001f;
 
+    while (m_bRunning) {
+        // Process any pending libinput events
+        processLibinputEvents();
 
-    while (m_bRunning && wl_display_dispatch(m_pWLDisplay) != -1) {
-        //renderSurface(m_pLastSurface);
+        // Process Wayland events
+        if (wl_display_prepare_read(m_pWLDisplay) == 0) {
+            // Handle any events already in the queue
+            wl_display_dispatch_pending(m_pWLDisplay);
+            
+            struct pollfd fds[2] = {
+                {wl_display_get_fd(m_pWLDisplay), POLLIN, 0},
+                {libinput_get_fd(m_pLibinput), POLLIN, 0}
+            };
+
+            if (poll(fds, 2, 16) > 0) { // 16ms timeout (~60fps)
+                if (fds[0].revents & POLLIN) {
+                    wl_display_read_events(m_pWLDisplay);
+                    wl_display_dispatch_pending(m_pWLDisplay);
+                } else {
+                    wl_display_cancel_read(m_pWLDisplay);
+                }
+            } else {
+                wl_display_cancel_read(m_pWLDisplay);
+            }
+        } else {
+            // If prepare_read fails, dispatch any pending events
+            wl_display_dispatch_pending(m_pWLDisplay);
+        }
+
+        // Ensure the display is flushed
+        wl_display_flush(m_pWLDisplay);
     }
 
-    if (m_pWLDisplay) {
-        wl_display_disconnect(m_pWLDisplay);
-        m_pWLDisplay = nullptr;
-    }
+    finish();
 }
 
 void CHyprmag::finish(int code) {
+    m_bRunning = false;
     m_vLayerSurfaces.clear();
 
     if (m_pWLDisplay) {
