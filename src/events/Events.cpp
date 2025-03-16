@@ -102,6 +102,10 @@ void Events::handleGlobalRemove(void* data, struct wl_registry* registry, uint32
     // todo
 }
 
+void Events::handlePointerButton(void* data, struct wl_pointer* wl_pointer, uint32_t serial, uint32_t time, uint32_t button, uint32_t state) {
+    g_pHyprmag->finish(1);
+}
+
 void Events::handleCapabilities(void* data, wl_seat* wl_seat, uint32_t capabilities) {
     if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
         const auto POINTER = wl_seat_get_pointer(wl_seat);

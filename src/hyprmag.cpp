@@ -33,19 +33,9 @@ void CHyprmag::processLibinputEvents() {
         auto type = libinput_event_get_type(event);
         
         switch (type) {
-            case LIBINPUT_EVENT_GESTURE_PINCH_BEGIN: {
-                auto gesture = libinput_event_get_gesture_event(event);
-                handlePinchBegin(gesture);
-                break;
-            }
             case LIBINPUT_EVENT_GESTURE_PINCH_UPDATE: {
                 auto gesture = libinput_event_get_gesture_event(event);
                 handlePinchUpdate(gesture);
-                break;
-            }
-            case LIBINPUT_EVENT_GESTURE_PINCH_END: {
-                auto gesture = libinput_event_get_gesture_event(event);
-                handlePinchEnd(gesture);
                 break;
             }
             default:
@@ -54,10 +44,6 @@ void CHyprmag::processLibinputEvents() {
         
         libinput_event_destroy(event);
     }
-}
-
-void CHyprmag::handlePinchBegin(struct libinput_event_gesture* event) {
-    m_gestureState.active = true;
 }
 
 float CHyprmag::getTargetScale(float monitor_scale) {
@@ -82,8 +68,6 @@ float CHyprmag::getTargetScale(float monitor_scale) {
 }
 
 void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
-    if (!m_gestureState.active) return;
-    
     static auto lastUpdate = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
     if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate).count() < 16) {
@@ -116,10 +100,6 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
             }
         }
     }
-}
-
-void CHyprmag::handlePinchEnd(struct libinput_event_gesture* event) {
-    m_gestureState.active = false;
 }
 
 void CHyprmag::init() {

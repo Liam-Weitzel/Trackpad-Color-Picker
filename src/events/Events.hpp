@@ -33,6 +33,8 @@ namespace Events {
 
     void handleGlobal(void *data, wl_registry *registry, uint32_t name, const char *interface, uint32_t version);
 
+    void handlePointerButton(void* data, struct wl_pointer* wl_pointer, uint32_t serial, uint32_t time, uint32_t button, uint32_t state);
+
     void handleGlobalRemove(void *data, wl_registry *registry, uint32_t name);
 
     void handleCapabilities(void *data, wl_seat *wl_seat, uint32_t capabilities);
@@ -75,7 +77,7 @@ namespace Events {
 
     inline const wl_seat_listener seatListener = { .capabilities = handleCapabilities };
 
-    inline const wl_pointer_listener pointerListener = { .enter = handlePointerEnter, .leave = handlePointerLeave, .motion = handlePointerMotion, .axis = handlePointerAxis };
+    inline const wl_pointer_listener pointerListener = { .enter = handlePointerEnter, .leave = handlePointerLeave, .motion = handlePointerMotion, .button = handlePointerButton, .axis = handlePointerAxis };
 
     inline const wl_keyboard_listener keyboardListener = { .keymap = handleKeyboardKeymap, .enter = handleKeyboardEnter,.leave = handleKeyboardLeave, .key = handleKeyboardKey, .modifiers = handleKeyboardModifiers };
 

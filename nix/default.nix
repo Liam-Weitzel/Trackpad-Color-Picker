@@ -14,6 +14,7 @@
   libxkbcommon,
   libinput,
   pango,
+  expect,
   pcre,
   pcre2,
   utillinux,
@@ -50,6 +51,7 @@ stdenv.mkDerivation {
     libsepol
     libthai
     libinput
+    expect
     pango
     pcre
     pcre2

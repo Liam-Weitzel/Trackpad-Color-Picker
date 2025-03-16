@@ -6,10 +6,6 @@
 
 #include <libinput.h>
 
-struct GestureState {
-    bool active = false;
-};
-
 struct ScalePair {
     float monitor_scale;
     float target_scale;
@@ -89,13 +85,10 @@ class CHyprmag {
 
     struct libinput* m_pLibinput = nullptr;
     struct libinput_device* m_pLibinputDevice = nullptr;
-    GestureState m_gestureState;
 
     // Add new methods for gesture handling
-    void handlePinchBegin(struct libinput_event_gesture* event);
     float getTargetScale(float monitor_scale);
     void handlePinchUpdate(struct libinput_event_gesture* event);
-    void handlePinchEnd(struct libinput_event_gesture* event);
     void processLibinputEvents();
   private:
 };
