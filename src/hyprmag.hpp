@@ -4,6 +4,15 @@
 #include "helpers/LayerSurface.hpp"
 #include "helpers/PoolBuffer.hpp"
 
+#include <libinput.h>
+
+struct GestureState {
+    bool active = false;
+    float initial_scale = 1.0f;
+    float current_scale = 1.0f;
+    uint32_t finger_count = 0;
+};
+
 class CHyprmag {
   public:
     void                                        init();
@@ -57,6 +66,15 @@ class CHyprmag {
 
     void                                        finish(int code = 0);
 
+    struct libinput* m_pLibinput = nullptr;
+    struct libinput_device* m_pLibinputDevice = nullptr;
+    GestureState m_gestureState;
+
+    // Add new methods for gesture handling
+    void handlePinchBegin(struct libinput_event_gesture* event);
+    void handlePinchUpdate(struct libinput_event_gesture* event);
+    void handlePinchEnd(struct libinput_event_gesture* event);
+    void processLibinputEvents();
   private:
 };
 

@@ -12,6 +12,7 @@
   libsepol,
   libthai,
   libxkbcommon,
+  libinput,
   pango,
   pcre,
   pcre2,
@@ -48,6 +49,7 @@ stdenv.mkDerivation {
     libselinux
     libsepol
     libthai
+    libinput
     pango
     pcre
     pcre2

@@ -1,10 +1,100 @@
 #include "hyprmag.hpp"
 #include <signal.h>
 #include "events/Events.hpp"
+#include <fcntl.h>
+#include <libinput.h>
+#include <libudev.h>
+
+static int open_restricted(const char *path, int flags, void *user_data) {
+    int fd = open(path, flags);
+    return fd < 0 ? -errno : fd;
+}
+
+static void close_restricted(int fd, void *user_data) {
+    close(fd);
+}
+
+static const struct libinput_interface interface = {
+    .open_restricted = open_restricted,
+    .close_restricted = close_restricted,
+};
 
 void sigHandler(int sig) {
     g_pHyprmag->m_vLayerSurfaces.clear();
     exit(0);
+}
+
+void CHyprmag::processLibinputEvents() {
+    libinput_dispatch(m_pLibinput);
+    struct libinput_event* event;
+    
+    while ((event = libinput_get_event(m_pLibinput)) != nullptr) {
+        auto type = libinput_event_get_type(event);
+        
+        switch (type) {
+            case LIBINPUT_EVENT_GESTURE_PINCH_BEGIN: {
+                auto gesture = libinput_event_get_gesture_event(event);
+                handlePinchBegin(gesture);
+                break;
+            }
+            case LIBINPUT_EVENT_GESTURE_PINCH_UPDATE: {
+                auto gesture = libinput_event_get_gesture_event(event);
+                handlePinchUpdate(gesture);
+                break;
+            }
+            case LIBINPUT_EVENT_GESTURE_PINCH_END: {
+                auto gesture = libinput_event_get_gesture_event(event);
+                handlePinchEnd(gesture);
+                break;
+            }
+            default:
+                break;
+        }
+        
+        libinput_event_destroy(event);
+    }
+}
+
+void CHyprmag::handlePinchBegin(struct libinput_event_gesture* event) {
+    m_gestureState.active = true;
+    m_gestureState.initial_scale = m_fScale;
+    m_gestureState.finger_count = libinput_event_gesture_get_finger_count(event);
+}
+
+void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
+    if (!m_gestureState.active) return;
+    
+    static auto lastUpdate = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate).count() < 16) {
+        return;
+    }
+    lastUpdate = now;
+
+    float scale = libinput_event_gesture_get_scale(event);
+    float target_scale = m_gestureState.initial_scale * scale;
+    
+    target_scale = std::max(0.5f, std::min(10.0f, target_scale));
+    
+    // Smooth interpolation
+    float alpha = 0.3f; // Adjust this value to control smoothing (0-1)
+    float new_scale = m_fScale + (target_scale - m_fScale) * alpha;
+    
+    if (std::abs(new_scale - m_fScale) > 0.001f) {
+        m_fScale = new_scale;
+        
+        // Force redraw cycle
+        if (m_pLastSurface) {
+            m_pLastSurface->rendered = false;
+            renderSurface(m_pLastSurface);
+            wl_display_flush(m_pWLDisplay);
+        }
+    }
+}
+
+void CHyprmag::handlePinchEnd(struct libinput_event_gesture* event) {
+    m_gestureState.active = false;
+    m_gestureState.finger_count = 0;
 }
 
 void CHyprmag::init() {
@@ -19,6 +109,33 @@ void CHyprmag::init() {
         exit(1);
         return;
     }
+
+    struct udev* udev = udev_new();
+    if (!udev) {
+        Debug::log(ERR, "Failed to create udev context");
+        return;
+    }
+
+    m_pLibinput = libinput_udev_create_context(&interface, nullptr, udev);
+    if (!m_pLibinput) {
+        Debug::log(ERR, "Failed to create libinput context");
+        udev_unref(udev);
+        return;
+    }
+
+    if (libinput_udev_assign_seat(m_pLibinput, "seat0") != 0) {
+        Debug::log(ERR, "Failed to assign seat to libinput");
+        libinput_unref(m_pLibinput);
+        udev_unref(udev);
+        return;
+    }
+
+    std::thread([this]() {
+        while (m_bRunning) {
+            processLibinputEvents();
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+    }).detach();
 
     signal(SIGTERM, sigHandler);
 
@@ -56,6 +173,11 @@ void CHyprmag::finish(int code) {
     if (m_pWLDisplay) {
         wl_display_disconnect(m_pWLDisplay);
         m_pWLDisplay = nullptr;
+    }
+
+    if (m_pLibinput) {
+        libinput_unref(m_pLibinput);
+        m_pLibinput = nullptr;
     }
 
     exit(code);
