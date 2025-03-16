@@ -93,10 +93,6 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
 
     float scale = libinput_event_gesture_get_scale(event);
     
-    // Calculate actual fractional scale from buffer sizes
-    float monitor_scale = (float)m_pLastSurface->screenBuffer.pixelSize.x / (float)m_pLastSurface->m_pMonitor->size.x;
-    float target_exit_scale = getTargetScale(monitor_scale);
-    
     float target_scale = m_fScale * scale;
     
     target_scale = std::max(1.0f, std::min(10.0f, target_scale));
@@ -104,8 +100,8 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
     // Smooth interpolation
     float alpha = 0.3f;
     float new_scale = m_fScale + (target_scale - m_fScale) * alpha;
-    
-    if (new_scale - target_exit_scale < 0.0f) {
+
+    if (new_scale - m_targetExitScale < 0.0f) {
         finish();
     }
     
@@ -181,8 +177,8 @@ void CHyprmag::init() {
     wl_display_roundtrip(m_pWLDisplay);
 
     float monitor_scale = (float)m_pLastSurface->screenBuffer.pixelSize.x / (float)m_pLastSurface->m_pMonitor->size.x;
-    float target_exit_scale = getTargetScale(monitor_scale);
-    m_fScale = target_exit_scale + 0.001f;
+    m_targetExitScale = getTargetScale(monitor_scale);
+    m_fScale = m_targetExitScale + 0.001f;
 
     while (m_bRunning) {
         // Process any pending libinput events
