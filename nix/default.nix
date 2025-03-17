@@ -64,7 +64,7 @@ stdenv.mkDerivation {
   ];
 
   outputs = [
-    "Trackpad-Color-Picker"
+    "out"
   ];
 
   meta = with lib; {

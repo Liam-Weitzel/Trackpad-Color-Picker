@@ -79,7 +79,7 @@ add_executable(Trackpad-Color-Picker ${SRCFILES})
 
 protocol("protocols/wlr-layer-shell-unstable-v1.xml" "wlr-layer-shell-unstable-v1" true)
 protocol("protocols/wlr-screencopy-unstable-v1.xml" "wlr-screencopy-unstable-v1" true)
-protocol("protocols/xdg-output-unstable-v1.xml" "xdg-output-unstable-v1" false)
+protocol("protocols/xdg-output-unstable-v1.xml" "xdg-output-unstable-v1" true)
 protocol("stable/xdg-shell/xdg-shell.xml" "xdg-shell" false)
 protocol("staging/cursor-shape/cursor-shape-v1.xml" "wp-cursor-shape-v1" false)
 protocol("unstable/tablet/tablet-unstable-v2.xml" "tablet-unstable-v2" false)
