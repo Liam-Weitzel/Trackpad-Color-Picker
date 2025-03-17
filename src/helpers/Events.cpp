@@ -1,6 +1,7 @@
 #include "Events.hpp"
 
 #include "../hyprmag.hpp"
+#include "Clipboard.hpp"
 
 void Events::geometry(void* data, wl_output* output, int32_t x, int32_t y, int32_t width_mm, int32_t height_mm, int32_t subpixel, const char* make, const char* model,
                       int32_t transform) {
@@ -103,6 +104,110 @@ void Events::handleGlobalRemove(void* data, struct wl_registry* registry, uint32
 }
 
 void Events::handlePointerButton(void* data, struct wl_pointer* wl_pointer, uint32_t serial, uint32_t time, uint32_t button, uint32_t state) {
+    auto fmax3 = [](float a, float b, float c) -> float { return (a > b && a > c) ? a : (b > c) ? b : c; };
+    auto fmin3 = [](float a, float b, float c) -> float { return (a < b && a < c) ? a : (b < c) ? b : c; };
+
+    // get the px and print it
+    const auto MOUSECOORDSABS = g_pHyprmag->m_vLastCoords.floor() / g_pHyprmag->m_pLastSurface->m_pMonitor->size;
+    const auto CLICKPOS       = MOUSECOORDSABS * g_pHyprmag->m_pLastSurface->screenBuffer.pixelSize;
+
+    const auto COL = g_pHyprmag->getColorFromPixel(g_pHyprmag->m_pLastSurface, CLICKPOS);
+
+    // relative brightness of a color
+    // https://www.w3.org/TR/2008/REC-WCAG20-20081211/#relativeluminancedef
+    const auto FLUMI = [](const float& c) -> float { return c <= 0.03928 ? c / 12.92 : powf((c + 0.055) / 1.055, 2.4); };
+    // threshold: (lumi_white + 0.05) / (x + 0.05) == (x + 0.05) / (lumi_black + 0.05)
+    // https://www.w3.org/TR/2008/REC-WCAG20-20081211/#contrast-ratiodef
+    const uint8_t FG = 0.2126 * FLUMI(COL.r / 255.0f) + 0.7152 * FLUMI(COL.g / 255.0f) + 0.0722 * FLUMI(COL.b / 255.0f) > 0.17913 ? 0 : 255;
+
+    switch (g_pHyprmag->m_bSelectedOutputMode) {
+        case OUTPUT_CMYK: {
+            // http://www.codeproject.com/KB/applications/xcmyk.aspx
+
+            float r = 1 - (COL.r / 255.0f), g = 1 - (COL.g / 255.0f), b = 1 - (COL.b / 255.0f);
+            float k = fmin3(r, g, b), K = (k == 1) ? 1 : 1 - k;
+            float c = (r - k) / K, m = (g - k) / K, y = (b - k) / K;
+
+            c = std::round(c * 100);
+            m = std::round(m * 100);
+            y = std::round(y * 100);
+            k = std::round(k * 100);
+
+            Clipboard::copy("%g%% %g%% %g%% %g%%", c, m, y, k);
+
+            g_pHyprmag->finish(1);
+            break;
+        }
+        case OUTPUT_HEX: {
+            auto toHex = [](int i) -> std::string {
+                const char* DS = g_pHyprmag->m_bUseLowerCase ? "0123456789abcdef" : "0123456789ABCDEF";
+
+                std::string result;
+                result += DS[i / 16];
+                result += DS[i % 16];
+
+                return result;
+            };
+
+            auto hexR = toHex(COL.r);
+            auto hexG = toHex(COL.g);
+            auto hexB = toHex(COL.b);
+
+            Clipboard::copy("#%s%s%s", toHex(COL.r).c_str(), toHex(COL.g).c_str(), toHex(COL.b).c_str());
+
+            g_pHyprmag->finish(1);
+            break;
+        }
+        case OUTPUT_RGB: {
+            Clipboard::copy("%i %i %i", COL.r, COL.g, COL.b);
+
+            g_pHyprmag->finish(1);
+            break;
+        }
+        case OUTPUT_HSL:
+        case OUTPUT_HSV: {
+            // https://en.wikipedia.org/wiki/HSL_and_HSV#From_RGB
+
+            auto floatEq = [](float a, float b) -> bool {
+                return std::nextafter(a, std::numeric_limits<double>::lowest()) <= b && std::nextafter(a, std::numeric_limits<double>::max()) >= b;
+            };
+
+            float h, s, l, v;
+            float r = COL.r / 255.0f, g = COL.g / 255.0f, b = COL.b / 255.0f;
+            float max = fmax3(r, g, b), min = fmin3(r, g, b);
+            float c = max - min;
+
+            v = max;
+            if (c == 0)
+                h = 0;
+            else if (v == r)
+                h = 60 * (0 + (g - b) / c);
+            else if (v == g)
+                h = 60 * (2 + (b - r) / c);
+            else /* v == b */
+                h = 60 * (4 + (r - g) / c);
+
+            float l_or_v;
+            if (g_pHyprmag->m_bSelectedOutputMode == OUTPUT_HSL) {
+                l      = (max + min) / 2;
+                s      = (floatEq(l, 0.0f) || floatEq(l, 1.0f)) ? 0 : (v - l) / std::min(l, 1 - l);
+                l_or_v = std::round(l * 100);
+            } else {
+                v      = max;
+                s      = floatEq(v, 0.0f) ? 0 : c / v;
+                l_or_v = std::round(v * 100);
+            }
+
+            h = std::round(h < 0 ? h + 360 : h);
+            s = std::round(s * 100);
+
+            Clipboard::copy("%g %g%% %g%%", h, s, l_or_v);
+
+            g_pHyprmag->finish(1);
+            break;
+        }
+    }
+
     g_pHyprmag->finish(1);
 }
 
@@ -139,6 +244,7 @@ void Events::handlePointerEnter(void* data, struct wl_pointer* wl_pointer, uint3
             // wl_pointer_set_cursor(wl_pointer, serial, ls->pCursorSurface, ls->pCursorImg->hotspot_x / ls->m_pMonitor->scale, ls->pCursorImg->hotspot_y / ls->m_pMonitor->scale);
             // wl_surface_commit(ls->pCursorSurface);
             wp_cursor_shape_device_v1_set_shape(g_pHyprmag->m_pCursorShapeDevice, serial, WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CROSSHAIR);
+            // g_pHyprmag->m_pCursorShapeDevice->sendSetShape(serial, WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CROSSHAIR);
         }
     }
     g_pHyprmag->renderSurface(g_pHyprmag->m_pLastSurface);

@@ -3,6 +3,7 @@
 #include "defines.hpp"
 #include "helpers/LayerSurface.hpp"
 #include "helpers/PoolBuffer.hpp"
+#include "helpers/Color.hpp"
 
 #include <libinput.h>
 
@@ -26,6 +27,13 @@ const std::vector<ScalePair> SCALE_MAP = {
     {2.8f, 1.0f}
 };
 
+enum eOutputMode {
+    OUTPUT_CMYK = 0,
+    OUTPUT_HEX,
+    OUTPUT_RGB,
+    OUTPUT_HSL,
+    OUTPUT_HSV
+};
 
 class CHyprmag {
   public:
@@ -35,6 +43,9 @@ class CHyprmag {
     int m_iUseCount = 0;
     bool m_bFirstLoad = true;
     static const int MAX_USES_BEFORE_RESTART = 5;
+
+    eOutputMode m_bSelectedOutputMode = OUTPUT_HEX;
+    bool m_bUseLowerCase = false;
 
     struct wp_fractional_scale_manager_v1* m_pFractionalScaleMgr = nullptr;
     std::mutex                                  m_mtTickMutex;
@@ -92,6 +103,7 @@ class CHyprmag {
     struct libinput_device* m_pLibinputDevice = nullptr;
 
     // Add new methods for gesture handling
+    CColor getColorFromPixel(CLayerSurface* pLS, Vector2D pix);
     float getTargetScale(float monitor_scale);
     void handlePinchBegin(struct libinput_event_gesture* event);
     void handlePinchUpdate(struct libinput_event_gesture* event);

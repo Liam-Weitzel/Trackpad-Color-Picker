@@ -1,6 +1,6 @@
 #include "LayerSurface.hpp"
 
-#include "../events/Events.hpp"
+#include "Events.hpp"
 #include "../hyprmag.hpp"
 
 CLayerSurface::CLayerSurface(SMonitor* pMonitor) {

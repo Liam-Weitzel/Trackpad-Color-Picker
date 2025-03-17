@@ -1,7 +1,7 @@
 #include "hyprmag.hpp"
 #include <signal.h>
 #include <poll.h>
-#include "events/Events.hpp"
+#include "helpers/Events.hpp"
 #include <fcntl.h>
 #include <libinput.h>
 #include <libudev.h>
@@ -127,7 +127,7 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
     
     float target_scale = m_fScale * scale;
     
-    target_scale = std::max(1.0f, std::min(7.0f, target_scale));
+    target_scale = std::max(1.0f, std::min(10.0f, target_scale));
     
     // Smooth interpolation
     float alpha = 0.3f;
@@ -540,6 +540,23 @@ void* CHyprmag::convert24To32Buffer(SPoolBuffer* pBuffer) {
     return newBuffer;
 }
 
+CColor CHyprmag::getColorFromPixel(CLayerSurface* pLS, Vector2D pix) {
+    pix = pix.floor();
+
+    if (pix.x >= pLS->screenBuffer.pixelSize.x || pix.y >= pLS->screenBuffer.pixelSize.y || pix.x < 0 || pix.y < 0)
+        return CColor{.r = 0, .g = 0, .b = 0, .a = 0};
+
+    void* dataSrc = pLS->screenBuffer.paddedData ? pLS->screenBuffer.paddedData : pLS->screenBuffer.data;
+    struct pixel {
+        unsigned char blue;
+        unsigned char green;
+        unsigned char red;
+        unsigned char alpha;
+    }* px = (struct pixel*)((char*)dataSrc + ((ptrdiff_t)pix.y * (int)pLS->screenBuffer.pixelSize.x * 4) + ((ptrdiff_t)pix.x * 4));
+
+    return CColor{.r = px->red, .g = px->green, .b = px->blue, .a = px->alpha};
+}
+
 void CHyprmag::renderSurface(CLayerSurface* pSurface, bool forceInactive) {
     const auto PBUFFER = getBufferForLS(pSurface);
 
@@ -592,7 +609,10 @@ void CHyprmag::renderSurface(CLayerSurface* pSurface, bool forceInactive) {
         cairo_restore(PCAIRO);
         cairo_save(PCAIRO);
 
-        cairo_set_source_rgba(PCAIRO, 255.f, 255.f, 255.f, 255.f);
+        const auto CLICKPOSBUF = CLICKPOS / PBUFFER->pixelSize * pSurface->screenBuffer.pixelSize;
+        const auto PIXCOLOR = getColorFromPixel(pSurface, CLICKPOS);
+
+        cairo_set_source_rgba(PCAIRO, PIXCOLOR.r / 255.f, PIXCOLOR.g / 255.f, PIXCOLOR.b / 255.f, PIXCOLOR.a / 255.f);
 
         cairo_scale(PCAIRO, 1, 1);
 
@@ -651,6 +671,40 @@ void CHyprmag::renderSurface(CLayerSurface* pSurface, bool forceInactive) {
 
         cairo_pattern_destroy(PATTERNPRE);
     }
+
+    // Draw crosshair
+    const auto centerX = m_vLastCoords.x * pSurface->m_pMonitor->scale;
+    const auto centerY = m_vLastCoords.y * pSurface->m_pMonitor->scale;
+    const float crosshairSize = 10.0f; // Adjust size as needed
+    const float lineWidth = 1.0f;      // Adjust thickness as needed
+
+    // Set crosshair color (white with black outline for visibility)
+    cairo_set_line_width(PCAIRO, lineWidth + 2.0);
+    cairo_set_source_rgba(PCAIRO, 0, 0, 0, 1);
+
+    // Horizontal line
+    cairo_move_to(PCAIRO, centerX - crosshairSize, centerY);
+    cairo_line_to(PCAIRO, centerX + crosshairSize, centerY);
+    cairo_stroke(PCAIRO);
+
+    // Vertical line
+    cairo_move_to(PCAIRO, centerX, centerY - crosshairSize);
+    cairo_line_to(PCAIRO, centerX, centerY + crosshairSize);
+    cairo_stroke(PCAIRO);
+
+    // Draw white inner lines
+    cairo_set_line_width(PCAIRO, lineWidth);
+    cairo_set_source_rgba(PCAIRO, 1, 1, 1, 1);
+
+    // Horizontal line
+    cairo_move_to(PCAIRO, centerX - crosshairSize, centerY);
+    cairo_line_to(PCAIRO, centerX + crosshairSize, centerY);
+    cairo_stroke(PCAIRO);
+
+    // Vertical line
+    cairo_move_to(PCAIRO, centerX, centerY - crosshairSize);
+    cairo_line_to(PCAIRO, centerX, centerY + crosshairSize);
+    cairo_stroke(PCAIRO);
 
     sendFrame(pSurface);
     cairo_destroy(PCAIRO);
