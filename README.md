@@ -2,9 +2,11 @@
 
 A wlroots-compatible Wayland screen magnifier with basic customization options.
 
+![preview](./preview.gif)
+
 # Usage
 
-Launch it. Trackpad pinch to zoom in. Move the mouse. That's it.
+Launch it. Trackpad pinch to zoom in/out. Move the mouse. That's it.
 
 ## Options
 
