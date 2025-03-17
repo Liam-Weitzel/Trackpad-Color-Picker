@@ -64,5 +64,4 @@ all:
 
 install:
 	mkdir -p ${DESTDIR}${PREFIX}/bin ${DESTDIR}${PREFIX}/share/man/man1
-	cp doc/hyprmag.1 ${DESTDIR}${PREFIX}/share/man/man1
-	cp build/hyprmag ${DESTDIR}${PREFIX}/bin
+	cp build/Trackpad-Color-Picker ${DESTDIR}${PREFIX}/bin

@@ -1,4 +1,4 @@
-#include "hyprmag.hpp"
+#include "trackpad-color-picker.hpp"
 #include <signal.h>
 #include <poll.h>
 #include "helpers/Events.hpp"
@@ -21,11 +21,11 @@ static const struct libinput_interface interface = {
 };
 
 void sigHandler(int sig) {
-    g_pHyprmag->m_vLayerSurfaces.clear();
+    g_pTrackpadColorPicker->m_vLayerSurfaces.clear();
     exit(0);
 }
 
-void CHyprmag::processLibinputEvents() {
+void CTrackpadColorPicker::processLibinputEvents() {
     libinput_dispatch(m_pLibinput);
     struct libinput_event* event;
     
@@ -56,7 +56,7 @@ void CHyprmag::processLibinputEvents() {
     }
 }
 
-void CHyprmag::handlePinchBegin(struct libinput_event_gesture* event) {
+void CTrackpadColorPicker::handlePinchBegin(struct libinput_event_gesture* event) {
     if (m_bMagnifierActive)
         return;
     m_bMagnifierActive = true;
@@ -94,7 +94,7 @@ void CHyprmag::handlePinchBegin(struct libinput_event_gesture* event) {
     }
 }
 
-float CHyprmag::getTargetScale(float monitor_scale) {
+float CTrackpadColorPicker::getTargetScale(float monitor_scale) {
     // Find the two closest values and interpolate between them
     for (size_t i = 0; i < SCALE_MAP.size() - 1; i++) {
         if (monitor_scale >= SCALE_MAP[i].monitor_scale && 
@@ -115,7 +115,7 @@ float CHyprmag::getTargetScale(float monitor_scale) {
     return SCALE_MAP.back().target_scale;
 }
 
-void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
+void CTrackpadColorPicker::handlePinchUpdate(struct libinput_event_gesture* event) {
     static auto lastUpdate = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
     if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate).count() < 16) {
@@ -151,9 +151,9 @@ void CHyprmag::handlePinchUpdate(struct libinput_event_gesture* event) {
     }
 }
 
-void CHyprmag::handlePinchEnd(struct libinput_event_gesture* event) {}
+void CTrackpadColorPicker::handlePinchEnd(struct libinput_event_gesture* event) {}
 
-void CHyprmag::init() {
+void CTrackpadColorPicker::init() {
 
     m_pXKBContext = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
     if (!m_pXKBContext)
@@ -286,14 +286,14 @@ void CHyprmag::init() {
     exit(0);
 }
 
-void CHyprmag::finish(int code) {
+void CTrackpadColorPicker::finish(int code) {
     if (m_bMagnifierActive) {
         m_bMagnifierActive = false;
         m_bToClear = true;
     }
 }
 
-void CHyprmag::recheckACK() {
+void CTrackpadColorPicker::recheckACK() {
     for (auto& ls : m_vLayerSurfaces) {
         if (ls->wantsACK && ls->screenBuffer.buffer) {
             ls->wantsACK = false;
@@ -311,7 +311,7 @@ void CHyprmag::recheckACK() {
     markDirty();
 }
 
-void CHyprmag::markDirty() {
+void CTrackpadColorPicker::markDirty() {
     for (auto& ls : m_vLayerSurfaces) {
         if (ls->frame_callback)
             continue;
@@ -324,7 +324,7 @@ void CHyprmag::markDirty() {
     }
 }
 
-SPoolBuffer* CHyprmag::getBufferForLS(CLayerSurface* pLS) {
+SPoolBuffer* CTrackpadColorPicker::getBufferForLS(CLayerSurface* pLS) {
     SPoolBuffer* returns = nullptr;
 
     for (auto i = 0; i < 2; ++i) {
@@ -342,7 +342,7 @@ SPoolBuffer* CHyprmag::getBufferForLS(CLayerSurface* pLS) {
     return returns;
 }
 
-bool CHyprmag::setCloexec(const int& FD) {
+bool CTrackpadColorPicker::setCloexec(const int& FD) {
     long flags = fcntl(FD, F_GETFD);
     if (flags == -1) {
         return false;
@@ -355,37 +355,37 @@ bool CHyprmag::setCloexec(const int& FD) {
     return true;
 }
 
-int CHyprmag::createPoolFile(size_t size, std::string& name) {
+int CTrackpadColorPicker::createPoolFile(size_t size, std::string& name) {
     const auto XDGRUNTIMEDIR = getenv("XDG_RUNTIME_DIR");
     if (!XDGRUNTIMEDIR) {
         Debug::log(CRIT, "XDG_RUNTIME_DIR not set!");
-        g_pHyprmag->finish(1);
+        g_pTrackpadColorPicker->finish(1);
     }
 
-    name = std::string(XDGRUNTIMEDIR) + "/.hyprmag_XXXXXX";
+    name = std::string(XDGRUNTIMEDIR) + "/.Trackpad-Color-Picker_XXXXXX";
 
     const auto FD = mkstemp((char*)name.c_str());
     if (FD < 0) {
         Debug::log(CRIT, "createPoolFile: fd < 0");
-        g_pHyprmag->finish(1);
+        g_pTrackpadColorPicker->finish(1);
     }
 
     if (!setCloexec(FD)) {
         close(FD);
         Debug::log(CRIT, "createPoolFile: !setCloexec");
-        g_pHyprmag->finish(1);
+        g_pTrackpadColorPicker->finish(1);
     }
 
     if (ftruncate(FD, size) < 0) {
         close(FD);
         Debug::log(CRIT, "createPoolFile: ftruncate < 0");
-        g_pHyprmag->finish(1);
+        g_pTrackpadColorPicker->finish(1);
     }
 
     return FD;
 }
 
-void CHyprmag::createBuffer(SPoolBuffer* pBuffer, int32_t w, int32_t h, uint32_t format, uint32_t stride) {
+void CTrackpadColorPicker::createBuffer(SPoolBuffer* pBuffer, int32_t w, int32_t h, uint32_t format, uint32_t stride) {
     const size_t SIZE = stride * h;
 
     std::string  name;
@@ -393,11 +393,11 @@ void CHyprmag::createBuffer(SPoolBuffer* pBuffer, int32_t w, int32_t h, uint32_t
 
     if (FD == -1) {
         Debug::log(CRIT, "Unable to create pool file!");
-        g_pHyprmag->finish(1);
+        g_pTrackpadColorPicker->finish(1);
     }
 
     const auto DATA = mmap(NULL, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, FD, 0);
-    const auto POOL = wl_shm_create_pool(g_pHyprmag->m_pWLSHM, FD, SIZE);
+    const auto POOL = wl_shm_create_pool(g_pTrackpadColorPicker->m_pWLSHM, FD, SIZE);
     pBuffer->buffer = wl_shm_pool_create_buffer(POOL, 0, w, h, stride, format);
 
     wl_buffer_add_listener(pBuffer->buffer, &Events::bufferListener, pBuffer);
@@ -414,7 +414,7 @@ void CHyprmag::createBuffer(SPoolBuffer* pBuffer, int32_t w, int32_t h, uint32_t
     pBuffer->stride    = stride;
 }
 
-void CHyprmag::destroyBuffer(SPoolBuffer* pBuffer) {
+void CTrackpadColorPicker::destroyBuffer(SPoolBuffer* pBuffer) {
     wl_buffer_destroy(pBuffer->buffer);
     cairo_destroy(pBuffer->cairo);
     cairo_surface_destroy(pBuffer->surface);
@@ -431,11 +431,11 @@ void CHyprmag::destroyBuffer(SPoolBuffer* pBuffer) {
     }
 }
 
-void CHyprmag::createSeat(wl_seat* pSeat) {
+void CTrackpadColorPicker::createSeat(wl_seat* pSeat) {
     wl_seat_add_listener(pSeat, &Events::seatListener, pSeat);
 }
 
-void CHyprmag::convertBuffer(SPoolBuffer* pBuffer) {
+void CTrackpadColorPicker::convertBuffer(SPoolBuffer* pBuffer) {
     switch (pBuffer->format) {
         case WL_SHM_FORMAT_ARGB8888:
         case WL_SHM_FORMAT_XRGB8888: break;
@@ -481,12 +481,12 @@ void CHyprmag::convertBuffer(SPoolBuffer* pBuffer) {
         default: {
             Debug::log(CRIT, "Unsupported format %i", pBuffer->format);
         }
-            g_pHyprmag->finish(1);
+            g_pTrackpadColorPicker->finish(1);
     }
 }
 
 // Mallocs a new buffer, which needs to be free'd!
-void* CHyprmag::convert24To32Buffer(SPoolBuffer* pBuffer) {
+void* CTrackpadColorPicker::convert24To32Buffer(SPoolBuffer* pBuffer) {
     uint8_t* newBuffer       = (uint8_t*)malloc((size_t)pBuffer->pixelSize.x * pBuffer->pixelSize.y * 4);
     int      newBufferStride = pBuffer->pixelSize.x * 4;
     uint8_t* oldBuffer       = (uint8_t*)pBuffer->data;
@@ -535,12 +535,12 @@ void* CHyprmag::convert24To32Buffer(SPoolBuffer* pBuffer) {
         default: {
             Debug::log(CRIT, "Unsupported format for 24bit buffer %i", pBuffer->format);
         }
-            g_pHyprmag->finish(1);
+            g_pTrackpadColorPicker->finish(1);
     }
     return newBuffer;
 }
 
-CColor CHyprmag::getColorFromPixel(CLayerSurface* pLS, Vector2D pix) {
+CColor CTrackpadColorPicker::getColorFromPixel(CLayerSurface* pLS, Vector2D pix) {
     pix = pix.floor();
 
     if (pix.x >= pLS->screenBuffer.pixelSize.x || pix.y >= pLS->screenBuffer.pixelSize.y || pix.x < 0 || pix.y < 0)
@@ -557,7 +557,7 @@ CColor CHyprmag::getColorFromPixel(CLayerSurface* pLS, Vector2D pix) {
     return CColor{.r = px->red, .g = px->green, .b = px->blue, .a = px->alpha};
 }
 
-void CHyprmag::renderSurface(CLayerSurface* pSurface, bool forceInactive) {
+void CTrackpadColorPicker::renderSurface(CLayerSurface* pSurface, bool forceInactive) {
     const auto PBUFFER = getBufferForLS(pSurface);
 
     if (!PBUFFER || !pSurface->screenBuffer.buffer)
@@ -577,11 +577,11 @@ void CHyprmag::renderSurface(CLayerSurface* pSurface, bool forceInactive) {
     cairo_rectangle(PCAIRO, 0, 0, pSurface->m_pMonitor->size.x * pSurface->m_pMonitor->scale, pSurface->m_pMonitor->size.y * pSurface->m_pMonitor->scale);
     cairo_fill(PCAIRO);
 
-    if (pSurface == g_pHyprmag->m_pLastSurface && !forceInactive) {
+    if (pSurface == g_pTrackpadColorPicker->m_pLastSurface && !forceInactive) {
         const auto SCALEBUFS   = Vector2D{pSurface->screenBuffer.pixelSize.x / PBUFFER->pixelSize.x, pSurface->screenBuffer.pixelSize.y / PBUFFER->pixelSize.y};
-        const auto SCALECURSOR = Vector2D{g_pHyprmag->m_pLastSurface->screenBuffer.pixelSize.x / (g_pHyprmag->m_pLastSurface->buffers[0].pixelSize.x / g_pHyprmag->m_pLastSurface->m_pMonitor->scale),
-                     g_pHyprmag->m_pLastSurface->screenBuffer.pixelSize.y / (g_pHyprmag->m_pLastSurface->buffers[0].pixelSize.y / g_pHyprmag->m_pLastSurface->m_pMonitor->scale)};
-        const auto CLICKPOS = Vector2D{g_pHyprmag->m_vLastCoords.floor().x * SCALECURSOR.x, g_pHyprmag->m_vLastCoords.floor().y * SCALECURSOR.y};
+        const auto SCALECURSOR = Vector2D{g_pTrackpadColorPicker->m_pLastSurface->screenBuffer.pixelSize.x / (g_pTrackpadColorPicker->m_pLastSurface->buffers[0].pixelSize.x / g_pTrackpadColorPicker->m_pLastSurface->m_pMonitor->scale),
+                     g_pTrackpadColorPicker->m_pLastSurface->screenBuffer.pixelSize.y / (g_pTrackpadColorPicker->m_pLastSurface->buffers[0].pixelSize.y / g_pTrackpadColorPicker->m_pLastSurface->m_pMonitor->scale)};
+        const auto CLICKPOS = Vector2D{g_pTrackpadColorPicker->m_vLastCoords.floor().x * SCALECURSOR.x, g_pTrackpadColorPicker->m_vLastCoords.floor().y * SCALECURSOR.y};
 
         const auto PATTERNPRE = cairo_pattern_create_for_surface(pSurface->screenBuffer.surface);
         cairo_pattern_set_filter(PATTERNPRE, CAIRO_FILTER_BILINEAR);
@@ -616,7 +616,7 @@ void CHyprmag::renderSurface(CLayerSurface* pSurface, bool forceInactive) {
 
         cairo_scale(PCAIRO, 1, 1);
 
-        const int radius = g_pHyprmag->m_iRadius;
+        const int radius = g_pTrackpadColorPicker->m_iRadius;
 
         cairo_arc(PCAIRO, m_vLastCoords.x * pSurface->m_pMonitor->scale, m_vLastCoords.y * pSurface->m_pMonitor->scale, radius * 1.02 / SCALEBUFS.x, 0, 2 * M_PI);
         cairo_clip(PCAIRO);
@@ -636,7 +636,7 @@ void CHyprmag::renderSurface(CLayerSurface* pSurface, bool forceInactive) {
         cairo_matrix_translate(&matrix, CLICKPOS.x + 0.5f, CLICKPOS.y + 0.5f);
 
         // the scale is inverted because we want to zoom in
-        const float scale = 1.0f / g_pHyprmag->m_fScale;
+        const float scale = 1.0f / g_pTrackpadColorPicker->m_fScale;
 
         cairo_matrix_scale(&matrix, scale, scale);
         cairo_matrix_translate(&matrix, -CLICKPOS.x / SCALEBUFS.x - 0.5f, -CLICKPOS.y / SCALEBUFS.y - 0.5f);
@@ -651,7 +651,7 @@ void CHyprmag::renderSurface(CLayerSurface* pSurface, bool forceInactive) {
         cairo_restore(PCAIRO);
 
         cairo_pattern_destroy(PATTERN);
-    } else if (!g_pHyprmag->m_bRenderInactive) {
+    } else if (!g_pTrackpadColorPicker->m_bRenderInactive) {
         cairo_set_operator(PCAIRO, CAIRO_OPERATOR_SOURCE);
         cairo_set_source_rgba(PCAIRO, 0, 0, 0, 0);
         cairo_rectangle(PCAIRO, 0, 0, pSurface->m_pMonitor->size.x * pSurface->m_pMonitor->scale, pSurface->m_pMonitor->size.y * pSurface->m_pMonitor->scale);
@@ -716,7 +716,7 @@ void CHyprmag::renderSurface(CLayerSurface* pSurface, bool forceInactive) {
     pSurface->rendered = true;
 }
 
-void CHyprmag::sendFrame(CLayerSurface* pSurface) {
+void CTrackpadColorPicker::sendFrame(CLayerSurface* pSurface) {
     pSurface->frame_callback = wl_surface_frame(pSurface->pSurface);
     wl_callback_add_listener(pSurface->frame_callback, &Events::frameListener, pSurface);
 

@@ -2,10 +2,10 @@
 
 #include <iostream>
 
-#include "hyprmag.hpp"
+#include "trackpad-color-picker.hpp"
 
 static void help(void) {
-    std::cout << "Hyprmag usage: hyprmag [arg [...]].\n\nArguments:\n"
+    std::cout << "Trackpad-Color-Picker [arg [...]].\n\nArguments:\n"
               << " -h | --help              | Show this help message\n"
               << " -r | --radius            | Define lens radius\n"
               << " -l | --lowercase-hex       | Outputs the hexcode in lowercase\n"
@@ -13,7 +13,7 @@ static void help(void) {
 }
 
 int main(int argc, char** argv, char** envp) {
-    g_pHyprmag = std::make_unique<CHyprmag>();
+    g_pTrackpadColorPicker = std::make_unique<CTrackpadColorPicker>();
 
     while (true) {
         static struct option long_options[] = {{"help", no_argument, NULL, 'h'},
@@ -29,19 +29,19 @@ int main(int argc, char** argv, char** envp) {
 
         switch (c) {
             case 'h': help(); exit(0);
-            case 'r': g_pHyprmag->m_iRadius         = atoi(optarg); break;
-            case 'l': g_pHyprmag->m_bUseLowerCase = true; break;
+            case 'r': g_pTrackpadColorPicker->m_iRadius         = atoi(optarg); break;
+            case 'l': g_pTrackpadColorPicker->m_bUseLowerCase = true; break;
             case 'f':
                 if (strcasecmp(optarg, "cmyk") == 0)
-                    g_pHyprmag->m_bSelectedOutputMode = OUTPUT_CMYK;
+                    g_pTrackpadColorPicker->m_bSelectedOutputMode = OUTPUT_CMYK;
                 else if (strcasecmp(optarg, "hex") == 0)
-                    g_pHyprmag->m_bSelectedOutputMode = OUTPUT_HEX;
+                    g_pTrackpadColorPicker->m_bSelectedOutputMode = OUTPUT_HEX;
                 else if (strcasecmp(optarg, "rgb") == 0)
-                    g_pHyprmag->m_bSelectedOutputMode = OUTPUT_RGB;
+                    g_pTrackpadColorPicker->m_bSelectedOutputMode = OUTPUT_RGB;
                 else if (strcasecmp(optarg, "hsl") == 0)
-                    g_pHyprmag->m_bSelectedOutputMode = OUTPUT_HSL;
+                    g_pTrackpadColorPicker->m_bSelectedOutputMode = OUTPUT_HSL;
                 else if (strcasecmp(optarg, "hsv") == 0)
-                    g_pHyprmag->m_bSelectedOutputMode = OUTPUT_HSV;
+                    g_pTrackpadColorPicker->m_bSelectedOutputMode = OUTPUT_HSV;
                 else {
                     Debug::log(NONE, "Unrecognized format %s", optarg);
                     exit(1);
@@ -51,12 +51,12 @@ int main(int argc, char** argv, char** envp) {
         }
     }
 
-    if (g_pHyprmag->m_iRadius <= 0 || g_pHyprmag->m_iRadius == INT32_MAX) {
+    if (g_pTrackpadColorPicker->m_iRadius <= 0 || g_pTrackpadColorPicker->m_iRadius == INT32_MAX) {
         std::cerr << "Radius must be between 0 and " << INT32_MAX << "!\n";
         exit(1);
     }
 
-    g_pHyprmag->init();
+    g_pTrackpadColorPicker->init();
 
     return 0;
 }

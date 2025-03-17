@@ -26,7 +26,7 @@
   version ? "git",
 }:
 stdenv.mkDerivation {
-  pname = "hyprmag" + lib.optionalString debug "-debug";
+  pname = "Trackpad-Color-Picker" + lib.optionalString debug "-debug";
   inherit version;
 
   src = ../.;
@@ -64,15 +64,14 @@ stdenv.mkDerivation {
   ];
 
   outputs = [
-    "out"
-    "man"
+    "Trackpad-Color-Picker"
   ];
 
   meta = with lib; {
-    homepage = "https://github.com/SIMULATAN/hyprmag";
-    description = "A wlroots-compatible Wayland screen magnifier with basic customization options.";
+    homepage = "https://github.com/Liam-Weitzel/Trackpad-Color-Picker";
+    description = "A wlroots-compatible Wayland screen magnifier and color picker daemon that activates on trackpad pinch gesture with basic customization options.";
     license = licenses.bsd3;
     platforms = platforms.linux;
-    mainProgram = "hyprmag";
+    mainProgram = "Trackpad-Color-Picker";
   };
 }

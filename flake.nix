@@ -1,5 +1,5 @@
 {
-  description = "Hyprmag - A wlroots-compatible Wayland screen magnifier, based on hyprpicker";
+  description = "Trackpad-Color-Picker - A wlroots-compatible Wayland screen magnifier and color picker daemon that activates on trackpad pinch gesture with basic customization options.";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -22,7 +22,7 @@
     ]);
   in {
     overlays.default = _: prev: rec {
-      hyprmag = prev.callPackage ./nix/default.nix {
+      Trackpad-Color-Picker = prev.callPackage ./nix/default.nix {
         stdenv = prev.gcc12Stdenv;
         version = "0.pre" + "+date=" + (mkDate (self.lastModifiedDate or "19700101")) + "_" + (self.shortRev or "dirty");
         wayland-protocols = prev.wayland-protocols.overrideAttrs (self: super: {
@@ -34,12 +34,12 @@
         });
         inherit (prev.xorg) libXdmcp;
       };
-      hyprmag-debug = hyprmag.override {debug = true;};
+      Trackpad-Color-Picker-debug = Trackpad-Color-Picker.override {debug = true;};
     };
 
     packages = genSystems (system:
       (self.overlays.default null pkgsFor.${system})
-      // {default = self.packages.${system}.hyprmag;});
+      // {default = self.packages.${system}.Trackpad-Color-Picker;});
 
     formatter = genSystems (system: pkgsFor.${system}.alejandra);
   };

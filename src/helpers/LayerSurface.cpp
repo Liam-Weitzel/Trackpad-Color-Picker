@@ -1,24 +1,24 @@
 #include "LayerSurface.hpp"
 
 #include "Events.hpp"
-#include "../hyprmag.hpp"
+#include "../trackpad-color-picker.hpp"
 
 CLayerSurface::CLayerSurface(SMonitor* pMonitor) {
     m_pMonitor = pMonitor;
 
-    pSurface = wl_compositor_create_surface(g_pHyprmag->m_pCompositor);
+    pSurface = wl_compositor_create_surface(g_pTrackpadColorPicker->m_pCompositor);
 
     if (!pSurface) {
-        Debug::log(CRIT, "The compositor did not allow hyprmag a surface!");
-        g_pHyprmag->finish(1);
+        Debug::log(CRIT, "The compositor did not allow Trackpad-Color-Picker a surface!");
+        g_pTrackpadColorPicker->finish(1);
         return;
     }
 
-    pLayerSurface = zwlr_layer_shell_v1_get_layer_surface(g_pHyprmag->m_pLayerShell, pSurface, pMonitor->output, ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, "hyprmag");
+    pLayerSurface = zwlr_layer_shell_v1_get_layer_surface(g_pTrackpadColorPicker->m_pLayerShell, pSurface, pMonitor->output, ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, "Trackpad-Color-Picker");
 
     if (!pLayerSurface) {
-        Debug::log(CRIT, "The compositor did not allow hyprmag a layersurface!");
-        g_pHyprmag->finish(1);
+        Debug::log(CRIT, "The compositor did not allow Trackpad-Color-Picker a layersurface!");
+        g_pTrackpadColorPicker->finish(1);
         return;
     }
 
@@ -30,7 +30,7 @@ CLayerSurface::CLayerSurface(SMonitor* pMonitor) {
     zwlr_layer_surface_v1_add_listener(pLayerSurface, &Events::layersurfaceListener, this);
     wl_surface_commit(pSurface);
 
-    wl_display_flush(g_pHyprmag->m_pWLDisplay);
+    wl_display_flush(g_pTrackpadColorPicker->m_pWLDisplay);
 }
 
 CLayerSurface::~CLayerSurface() {
@@ -53,13 +53,13 @@ CLayerSurface::~CLayerSurface() {
     }
 
     // Finally destroy buffers
-    if (g_pHyprmag) {
-        g_pHyprmag->destroyBuffer(&buffers[0]);
-        g_pHyprmag->destroyBuffer(&buffers[1]);
-        g_pHyprmag->destroyBuffer(&screenBuffer);
+    if (g_pTrackpadColorPicker) {
+        g_pTrackpadColorPicker->destroyBuffer(&buffers[0]);
+        g_pTrackpadColorPicker->destroyBuffer(&buffers[1]);
+        g_pTrackpadColorPicker->destroyBuffer(&screenBuffer);
     }
 
-    if (g_pHyprmag && g_pHyprmag->m_pWLDisplay) {
-        wl_display_flush(g_pHyprmag->m_pWLDisplay);
+    if (g_pTrackpadColorPicker && g_pTrackpadColorPicker->m_pWLDisplay) {
+        wl_display_flush(g_pTrackpadColorPicker->m_pWLDisplay);
     }
 }

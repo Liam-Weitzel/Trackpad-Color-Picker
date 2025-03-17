@@ -1,6 +1,6 @@
 #include "Events.hpp"
 
-#include "../hyprmag.hpp"
+#include "../trackpad-color-picker.hpp"
 #include "Clipboard.hpp"
 
 void Events::geometry(void* data, wl_output* output, int32_t x, int32_t y, int32_t width_mm, int32_t height_mm, int32_t subpixel, const char* make, const char* model,
@@ -60,42 +60,42 @@ void Events::ls_configure(void* data, zwlr_layer_surface_v1* surface, uint32_t s
     PLAYERSURFACE->wantsACK  = true;
     PLAYERSURFACE->working   = true;
 
-    g_pHyprmag->recheckACK();
+    g_pTrackpadColorPicker->recheckACK();
 }
 
 void Events::handleGlobal(void* data, struct wl_registry* registry, uint32_t name, const char* interface, uint32_t version) {
     if (strcmp(interface, zxdg_output_manager_v1_interface.name) == 0) {
-        g_pHyprmag->m_pXDGOutputMgr = (zxdg_output_manager_v1*)wl_registry_bind(
+        g_pTrackpadColorPicker->m_pXDGOutputMgr = (zxdg_output_manager_v1*)wl_registry_bind(
             registry, name, &zxdg_output_manager_v1_interface, 
             version > 2 ? 2 : version);
     } else if (strcmp(interface, wl_compositor_interface.name) == 0) {
-        g_pHyprmag->m_pCompositor = (wl_compositor*)wl_registry_bind(registry, name, &wl_compositor_interface, 4);
+        g_pTrackpadColorPicker->m_pCompositor = (wl_compositor*)wl_registry_bind(registry, name, &wl_compositor_interface, 4);
     } else if (strcmp(interface, wl_shm_interface.name) == 0) {
-        g_pHyprmag->m_pWLSHM = (wl_shm*)wl_registry_bind(registry, name, &wl_shm_interface, 1);
+        g_pTrackpadColorPicker->m_pWLSHM = (wl_shm*)wl_registry_bind(registry, name, &wl_shm_interface, 1);
     } else if (strcmp(interface, wl_output_interface.name) == 0) {
-        g_pHyprmag->m_mtTickMutex.lock();
+        g_pTrackpadColorPicker->m_mtTickMutex.lock();
 
-        const auto PMONITOR    = g_pHyprmag->m_vMonitors.emplace_back(std::make_unique<SMonitor>()).get();
+        const auto PMONITOR    = g_pTrackpadColorPicker->m_vMonitors.emplace_back(std::make_unique<SMonitor>()).get();
         PMONITOR->wayland_name = name;
         PMONITOR->name         = "";
         PMONITOR->output       = (wl_output*)wl_registry_bind(registry, name, &wl_output_interface, 4);
         wl_output_add_listener(PMONITOR->output, &Events::outputListener, PMONITOR);
 
-        if (g_pHyprmag->m_pXDGOutputMgr) {
+        if (g_pTrackpadColorPicker->m_pXDGOutputMgr) {
             auto xdg_output = zxdg_output_manager_v1_get_xdg_output(
-                g_pHyprmag->m_pXDGOutputMgr, PMONITOR->output);
+                g_pTrackpadColorPicker->m_pXDGOutputMgr, PMONITOR->output);
             zxdg_output_v1_add_listener(xdg_output, &Events::xdgOutputListener, PMONITOR);
         }
 
-        g_pHyprmag->m_mtTickMutex.unlock();
+        g_pTrackpadColorPicker->m_mtTickMutex.unlock();
     } else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {
-        g_pHyprmag->m_pLayerShell = (zwlr_layer_shell_v1*)wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, 1);
+        g_pTrackpadColorPicker->m_pLayerShell = (zwlr_layer_shell_v1*)wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, 1);
     } else if (strcmp(interface, wl_seat_interface.name) == 0) {
-        g_pHyprmag->createSeat((wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, 1));
+        g_pTrackpadColorPicker->createSeat((wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, 1));
     } else if (strcmp(interface, zwlr_screencopy_manager_v1_interface.name) == 0) {
-        g_pHyprmag->m_pSCMgr = (zwlr_screencopy_manager_v1*)wl_registry_bind(registry, name, &zwlr_screencopy_manager_v1_interface, 1);
+        g_pTrackpadColorPicker->m_pSCMgr = (zwlr_screencopy_manager_v1*)wl_registry_bind(registry, name, &zwlr_screencopy_manager_v1_interface, 1);
     } else if (strcmp(interface, wp_cursor_shape_manager_v1_interface.name) == 0) {
-        g_pHyprmag->m_pCursorShape = (wp_cursor_shape_manager_v1*)wl_registry_bind(registry, name, &wp_cursor_shape_manager_v1_interface, 1);
+        g_pTrackpadColorPicker->m_pCursorShape = (wp_cursor_shape_manager_v1*)wl_registry_bind(registry, name, &wp_cursor_shape_manager_v1_interface, 1);
     }
 }
 
@@ -108,10 +108,10 @@ void Events::handlePointerButton(void* data, struct wl_pointer* wl_pointer, uint
     auto fmin3 = [](float a, float b, float c) -> float { return (a < b && a < c) ? a : (b < c) ? b : c; };
 
     // get the px and print it
-    const auto MOUSECOORDSABS = g_pHyprmag->m_vLastCoords.floor() / g_pHyprmag->m_pLastSurface->m_pMonitor->size;
-    const auto CLICKPOS       = MOUSECOORDSABS * g_pHyprmag->m_pLastSurface->screenBuffer.pixelSize;
+    const auto MOUSECOORDSABS = g_pTrackpadColorPicker->m_vLastCoords.floor() / g_pTrackpadColorPicker->m_pLastSurface->m_pMonitor->size;
+    const auto CLICKPOS       = MOUSECOORDSABS * g_pTrackpadColorPicker->m_pLastSurface->screenBuffer.pixelSize;
 
-    const auto COL = g_pHyprmag->getColorFromPixel(g_pHyprmag->m_pLastSurface, CLICKPOS);
+    const auto COL = g_pTrackpadColorPicker->getColorFromPixel(g_pTrackpadColorPicker->m_pLastSurface, CLICKPOS);
 
     // relative brightness of a color
     // https://www.w3.org/TR/2008/REC-WCAG20-20081211/#relativeluminancedef
@@ -120,7 +120,7 @@ void Events::handlePointerButton(void* data, struct wl_pointer* wl_pointer, uint
     // https://www.w3.org/TR/2008/REC-WCAG20-20081211/#contrast-ratiodef
     const uint8_t FG = 0.2126 * FLUMI(COL.r / 255.0f) + 0.7152 * FLUMI(COL.g / 255.0f) + 0.0722 * FLUMI(COL.b / 255.0f) > 0.17913 ? 0 : 255;
 
-    switch (g_pHyprmag->m_bSelectedOutputMode) {
+    switch (g_pTrackpadColorPicker->m_bSelectedOutputMode) {
         case OUTPUT_CMYK: {
             // http://www.codeproject.com/KB/applications/xcmyk.aspx
 
@@ -135,12 +135,12 @@ void Events::handlePointerButton(void* data, struct wl_pointer* wl_pointer, uint
 
             Clipboard::copy("%g%% %g%% %g%% %g%%", c, m, y, k);
 
-            g_pHyprmag->finish(1);
+            g_pTrackpadColorPicker->finish(1);
             break;
         }
         case OUTPUT_HEX: {
             auto toHex = [](int i) -> std::string {
-                const char* DS = g_pHyprmag->m_bUseLowerCase ? "0123456789abcdef" : "0123456789ABCDEF";
+                const char* DS = g_pTrackpadColorPicker->m_bUseLowerCase ? "0123456789abcdef" : "0123456789ABCDEF";
 
                 std::string result;
                 result += DS[i / 16];
@@ -155,13 +155,13 @@ void Events::handlePointerButton(void* data, struct wl_pointer* wl_pointer, uint
 
             Clipboard::copy("#%s%s%s", toHex(COL.r).c_str(), toHex(COL.g).c_str(), toHex(COL.b).c_str());
 
-            g_pHyprmag->finish(1);
+            g_pTrackpadColorPicker->finish(1);
             break;
         }
         case OUTPUT_RGB: {
             Clipboard::copy("%i %i %i", COL.r, COL.g, COL.b);
 
-            g_pHyprmag->finish(1);
+            g_pTrackpadColorPicker->finish(1);
             break;
         }
         case OUTPUT_HSL:
@@ -188,7 +188,7 @@ void Events::handlePointerButton(void* data, struct wl_pointer* wl_pointer, uint
                 h = 60 * (4 + (r - g) / c);
 
             float l_or_v;
-            if (g_pHyprmag->m_bSelectedOutputMode == OUTPUT_HSL) {
+            if (g_pTrackpadColorPicker->m_bSelectedOutputMode == OUTPUT_HSL) {
                 l      = (max + min) / 2;
                 s      = (floatEq(l, 0.0f) || floatEq(l, 1.0f)) ? 0 : (v - l) / std::min(l, 1 - l);
                 l_or_v = std::round(l * 100);
@@ -203,22 +203,22 @@ void Events::handlePointerButton(void* data, struct wl_pointer* wl_pointer, uint
 
             Clipboard::copy("%g %g%% %g%%", h, s, l_or_v);
 
-            g_pHyprmag->finish(1);
+            g_pTrackpadColorPicker->finish(1);
             break;
         }
     }
 
-    g_pHyprmag->finish(1);
+    g_pTrackpadColorPicker->finish(1);
 }
 
 void Events::handleCapabilities(void* data, wl_seat* wl_seat, uint32_t capabilities) {
     if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
         const auto POINTER = wl_seat_get_pointer(wl_seat);
         wl_pointer_add_listener(POINTER, &pointerListener, wl_seat);
-        g_pHyprmag->m_pCursorShapeDevice = wp_cursor_shape_manager_v1_get_pointer(g_pHyprmag->m_pCursorShape, POINTER);
+        g_pTrackpadColorPicker->m_pCursorShapeDevice = wp_cursor_shape_manager_v1_get_pointer(g_pTrackpadColorPicker->m_pCursorShape, POINTER);
     } else {
-        Debug::log(CRIT, "Hyprmag cannot work without a pointer!");
-        g_pHyprmag->finish(1);
+        Debug::log(CRIT, "Trackpad-Color-Picker cannot work without a pointer!");
+        g_pTrackpadColorPicker->finish(1);
     }
 
     if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD) {
@@ -227,14 +227,14 @@ void Events::handleCapabilities(void* data, wl_seat* wl_seat, uint32_t capabilit
 }
 
 void Events::handlePointerEnter(void* data, struct wl_pointer* wl_pointer, uint32_t serial, struct wl_surface* surface, wl_fixed_t surface_x, wl_fixed_t surface_y) {
-    g_pHyprmag->markDirty();
+    g_pTrackpadColorPicker->markDirty();
     wl_pointer_set_cursor(wl_pointer, 0, nullptr, 0, 0);
 
-    g_pHyprmag->m_vLastCoords = {wl_fixed_to_double(surface_x), wl_fixed_to_double(surface_y)};
+    g_pTrackpadColorPicker->m_vLastCoords = {wl_fixed_to_double(surface_x), wl_fixed_to_double(surface_y)};
 
-    for (auto& ls : g_pHyprmag->m_vLayerSurfaces) {
+    for (auto& ls : g_pTrackpadColorPicker->m_vLayerSurfaces) {
         if (ls->pSurface == surface) {
-            g_pHyprmag->m_pLastSurface = ls.get();
+            g_pTrackpadColorPicker->m_pLastSurface = ls.get();
 
             if (!ls->pCursorImg)
                 break;
@@ -243,17 +243,17 @@ void Events::handlePointerEnter(void* data, struct wl_pointer* wl_pointer, uint3
             // wl_surface_attach(ls->pCursorSurface, wl_cursor_image_get_buffer(ls->pCursorImg), 0, 0);
             // wl_pointer_set_cursor(wl_pointer, serial, ls->pCursorSurface, ls->pCursorImg->hotspot_x / ls->m_pMonitor->scale, ls->pCursorImg->hotspot_y / ls->m_pMonitor->scale);
             // wl_surface_commit(ls->pCursorSurface);
-            wp_cursor_shape_device_v1_set_shape(g_pHyprmag->m_pCursorShapeDevice, serial, WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CROSSHAIR);
-            // g_pHyprmag->m_pCursorShapeDevice->sendSetShape(serial, WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CROSSHAIR);
+            wp_cursor_shape_device_v1_set_shape(g_pTrackpadColorPicker->m_pCursorShapeDevice, serial, WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CROSSHAIR);
+            // g_pTrackpadColorPicker->m_pCursorShapeDevice->sendSetShape(serial, WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CROSSHAIR);
         }
     }
-    g_pHyprmag->renderSurface(g_pHyprmag->m_pLastSurface);
+    g_pTrackpadColorPicker->renderSurface(g_pTrackpadColorPicker->m_pLastSurface);
 }
 
 void Events::handlePointerLeave(void* data, struct wl_pointer* wl_pointer, uint32_t serial, struct wl_surface* surface) {
-    for (auto& ls : g_pHyprmag->m_vLayerSurfaces) {
+    for (auto& ls : g_pTrackpadColorPicker->m_vLayerSurfaces) {
         if (ls->pSurface == surface) {
-            g_pHyprmag->renderSurface(ls.get(), true);
+            g_pTrackpadColorPicker->renderSurface(ls.get(), true);
         }
     }
 }
@@ -266,13 +266,13 @@ void Events::handlePointerMotion(void* data, struct wl_pointer* wl_pointer, uint
     auto x = wl_fixed_to_double(surface_x);
     auto y = wl_fixed_to_double(surface_y);
 
-    g_pHyprmag->m_vLastCoords = {x, y};
+    g_pTrackpadColorPicker->m_vLastCoords = {x, y};
 
-    g_pHyprmag->markDirty();
+    g_pTrackpadColorPicker->markDirty();
 }
 
 void Events::handleKeyboardKeymap(void* data, wl_keyboard* wl_keyboard, uint format, int fd, uint size) {
-    if (!g_pHyprmag->m_pXKBContext)
+    if (!g_pTrackpadColorPicker->m_pXKBContext)
         return;
 
     if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
@@ -286,18 +286,18 @@ void Events::handleKeyboardKeymap(void* data, wl_keyboard* wl_keyboard, uint for
         return;
     }
 
-    g_pHyprmag->m_pXKBKeymap = xkb_keymap_new_from_buffer(g_pHyprmag->m_pXKBContext, buf, size - 1, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+    g_pTrackpadColorPicker->m_pXKBKeymap = xkb_keymap_new_from_buffer(g_pTrackpadColorPicker->m_pXKBContext, buf, size - 1, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
 
     munmap((void*)buf, size);
     close(fd);
 
-    if (!g_pHyprmag->m_pXKBKeymap) {
+    if (!g_pTrackpadColorPicker->m_pXKBKeymap) {
         Debug::log(ERR, "Failed to compile xkb keymap");
         return;
     }
 
-    g_pHyprmag->m_pXKBState = xkb_state_new(g_pHyprmag->m_pXKBKeymap);
-    if (!g_pHyprmag->m_pXKBState) {
+    g_pTrackpadColorPicker->m_pXKBState = xkb_state_new(g_pTrackpadColorPicker->m_pXKBKeymap);
+    if (!g_pTrackpadColorPicker->m_pXKBState) {
         Debug::log(ERR, "Failed to create xkb state");
         return;
     }
@@ -307,11 +307,11 @@ void Events::handleKeyboardKey(void* data, struct wl_keyboard* keyboard, uint32_
     if (state != WL_KEYBOARD_KEY_STATE_PRESSED)
         return;
 
-    if (g_pHyprmag->m_pXKBState) {
-        if (xkb_state_key_get_one_sym(g_pHyprmag->m_pXKBState, key + 8) == XKB_KEY_Escape)
-            g_pHyprmag->finish();
+    if (g_pTrackpadColorPicker->m_pXKBState) {
+        if (xkb_state_key_get_one_sym(g_pTrackpadColorPicker->m_pXKBState, key + 8) == XKB_KEY_Escape)
+            g_pTrackpadColorPicker->finish();
     } else if (key == 1) // Assume keycode 1 is escape
-        g_pHyprmag->finish();
+        g_pTrackpadColorPicker->finish();
 }
 
 void Events::handleKeyboardEnter(void* data, wl_keyboard* wl_keyboard, uint serial, wl_surface* surface, wl_array* keys) {}
@@ -319,10 +319,10 @@ void Events::handleKeyboardEnter(void* data, wl_keyboard* wl_keyboard, uint seri
 void Events::handleKeyboardLeave(void* data, wl_keyboard* wl_keyboard, uint serial, wl_surface* surface) {}
 
 void Events::handleKeyboardModifiers(void* data, wl_keyboard* wl_keyboard, uint serial, uint mods_depressed, uint mods_latched, uint mods_locked, uint group) {
-    if (!g_pHyprmag->m_pXKBState)
+    if (!g_pTrackpadColorPicker->m_pXKBState)
         return;
 
-    xkb_state_update_mask(g_pHyprmag->m_pXKBState, mods_depressed, mods_latched, mods_locked, 0, 0, group);
+    xkb_state_update_mask(g_pTrackpadColorPicker->m_pXKBState, mods_depressed, mods_latched, mods_locked, 0, 0, group);
 }
 
 void Events::handleFrameDone(void* data, struct wl_callback* callback, uint32_t time) {
@@ -334,7 +334,7 @@ void Events::handleFrameDone(void* data, struct wl_callback* callback, uint32_t 
     pLS->frame_callback = nullptr;
 
     if (pLS->dirty || !pLS->rendered)
-        g_pHyprmag->renderSurface(g_pHyprmag->m_pLastSurface);
+        g_pTrackpadColorPicker->renderSurface(g_pTrackpadColorPicker->m_pLastSurface);
 }
 
 void Events::handleBufferRelease(void* data, struct wl_buffer* wl_buffer) {
@@ -348,7 +348,7 @@ void Events::handleSCBuffer(void* data, struct zwlr_screencopy_frame_v1* frame, 
     PLS->screenBufferFormat = format;
 
     if (!PLS->screenBuffer.buffer)
-        g_pHyprmag->createBuffer(&PLS->screenBuffer, width, height, format, stride);
+        g_pTrackpadColorPicker->createBuffer(&PLS->screenBuffer, width, height, format, stride);
 
     zwlr_screencopy_frame_v1_copy(frame, PLS->screenBuffer.buffer);
 }
@@ -358,7 +358,7 @@ void Events::handleSCFlags(void* data, struct zwlr_screencopy_frame_v1* frame, u
 
     PLS->scflags = flags;
 
-    g_pHyprmag->recheckACK();
+    g_pTrackpadColorPicker->recheckACK();
 }
 
 void Events::handleSCReady(void* lsdata, struct zwlr_screencopy_frame_v1* frame, uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec) {
@@ -370,19 +370,19 @@ void Events::handleSCReady(void* lsdata, struct zwlr_screencopy_frame_v1* frame,
     if (PLS->m_pMonitor->transform % 2 == 1)
         std::swap(transformedSize.x, transformedSize.y);
 
-    g_pHyprmag->createBuffer(&newBuf, transformedSize.x, transformedSize.y, PLS->screenBufferFormat, transformedSize.x * 4);
+    g_pTrackpadColorPicker->createBuffer(&newBuf, transformedSize.x, transformedSize.y, PLS->screenBufferFormat, transformedSize.x * 4);
 
     int   bytesPerPixel = PLS->screenBuffer.stride / (int)PLS->screenBuffer.pixelSize.x;
     void* data          = PLS->screenBuffer.data;
     if (bytesPerPixel == 4)
-        g_pHyprmag->convertBuffer(&PLS->screenBuffer);
+        g_pTrackpadColorPicker->convertBuffer(&PLS->screenBuffer);
     else if (bytesPerPixel == 3) {
-        Debug::log(WARN, "24 bit formats are unsupported, hyprmag may or may not work as intended!");
-        data                         = g_pHyprmag->convert24To32Buffer(&PLS->screenBuffer);
+        Debug::log(WARN, "24 bit formats are unsupported, Trackpad-Color-Picker may or may not work as intended!");
+        data                         = g_pTrackpadColorPicker->convert24To32Buffer(&PLS->screenBuffer);
         PLS->screenBuffer.paddedData = data;
     } else {
         Debug::log(CRIT, "Unsupported stride/bytes per pixel %i", bytesPerPixel);
-        g_pHyprmag->finish(1);
+        g_pTrackpadColorPicker->finish(1);
     }
 
     cairo_surface_t* oldSurface = cairo_image_surface_create_for_data((unsigned char*)data, CAIRO_FORMAT_ARGB32, PLS->screenBuffer.pixelSize.x, PLS->screenBuffer.pixelSize.y,
@@ -437,14 +437,14 @@ void Events::handleSCReady(void* lsdata, struct zwlr_screencopy_frame_v1* frame,
 
     cairo_surface_destroy(oldSurface);
 
-    g_pHyprmag->destroyBuffer(&PLS->screenBuffer);
+    g_pTrackpadColorPicker->destroyBuffer(&PLS->screenBuffer);
 
     PLS->screenBuffer = newBuf;
 
-    g_pHyprmag->renderSurface(PLS);
+    g_pTrackpadColorPicker->renderSurface(PLS);
 }
 
 void Events::handleSCFailed(void* data, struct zwlr_screencopy_frame_v1* frame) {
     Debug::log(CRIT, "Failed to get a Screencopy!");
-    g_pHyprmag->finish(1);
+    g_pTrackpadColorPicker->finish(1);
 }

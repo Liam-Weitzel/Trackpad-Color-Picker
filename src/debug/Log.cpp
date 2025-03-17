@@ -52,7 +52,7 @@ void Debug::log(LogLevel level, const char* fmt, ...) {
         va_end(args);
     }
 
-    // hyprmag only logs to stdout
+    // Trackpad-Color-Picker only logs to stdout
     std::cout << levelstr << outputStr << "\n";
 
     // free the log

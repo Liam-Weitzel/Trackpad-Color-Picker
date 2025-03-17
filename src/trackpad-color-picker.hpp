@@ -35,7 +35,7 @@ enum eOutputMode {
     OUTPUT_HSV
 };
 
-class CHyprmag {
+class CTrackpadColorPicker {
   public:
     void                                        init();
     bool m_bMagnifierActive = false;
@@ -112,4 +112,4 @@ class CHyprmag {
   private:
 };
 
-inline std::unique_ptr<CHyprmag> g_pHyprmag;
+inline std::unique_ptr<CTrackpadColorPicker> g_pTrackpadColorPicker;
