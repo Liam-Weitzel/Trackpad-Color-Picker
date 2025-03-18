@@ -76,6 +76,28 @@ bindgesture pinch:inward exec
 bindgesture pinch:outward exec
 ```
 
+# Monitor Scaling
+
+The internal scaling table in `src/trackpad-color-picker.hpp` is primarily used to determine when to exit the color picker on zoom out gestures:
+
+```cpp
+const std::vector<ScalePair> SCALE_MAP = {
+    {0.5f, 2.0f},
+    {0.6f, 1.66f},
+    {0.7f, 1.41f},
+    {0.9f, 1.1f},
+    {1.1f, 1.8f},
+    {1.2f, 1.6f},
+    {1.3f, 1.55f},
+    {1.5f, 1.32f},
+    {1.7f, 1.2f},
+    {2.1f, 1.44f},
+    {2.8f, 1.0f}
+};
+```
+
+If you find the color picker exiting too early or too late on pinch-out gestures, you may need to adjust these values for your monitor's scaling. Note that you can always exit the color picker by clicking to select a color or pressing escape, regardless of these values.
+
 # Caveats
 
 "Freezes" your displays while magnifying.
