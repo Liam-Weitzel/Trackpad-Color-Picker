@@ -238,13 +238,6 @@ void Events::handlePointerEnter(void* data, struct wl_pointer* wl_pointer, uint3
 
             if (!ls->pCursorImg)
                 break;
-
-            // wl_surface_set_buffer_scale(ls->pCursorSurface, ls->m_pMonitor->scale);
-            // wl_surface_attach(ls->pCursorSurface, wl_cursor_image_get_buffer(ls->pCursorImg), 0, 0);
-            // wl_pointer_set_cursor(wl_pointer, serial, ls->pCursorSurface, ls->pCursorImg->hotspot_x / ls->m_pMonitor->scale, ls->pCursorImg->hotspot_y / ls->m_pMonitor->scale);
-            // wl_surface_commit(ls->pCursorSurface);
-            wp_cursor_shape_device_v1_set_shape(g_pTrackpadColorPicker->m_pCursorShapeDevice, serial, WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CROSSHAIR);
-            // g_pTrackpadColorPicker->m_pCursorShapeDevice->sendSetShape(serial, WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CROSSHAIR);
         }
     }
     g_pTrackpadColorPicker->renderSurface(g_pTrackpadColorPicker->m_pLastSurface);
