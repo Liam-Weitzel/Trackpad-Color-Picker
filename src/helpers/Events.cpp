@@ -233,6 +233,7 @@ void Events::handlePointerEnter(void* data, struct wl_pointer* wl_pointer, uint3
     g_pTrackpadColorPicker->m_vLastCoords = {wl_fixed_to_double(surface_x), wl_fixed_to_double(surface_y)};
 
     for (auto& ls : g_pTrackpadColorPicker->m_vLayerSurfaces) {
+        g_pTrackpadColorPicker->renderSurface(ls.get(), true);
         if (ls->pSurface == surface) {
             g_pTrackpadColorPicker->m_pLastSurface = ls.get();
 
@@ -245,9 +246,7 @@ void Events::handlePointerEnter(void* data, struct wl_pointer* wl_pointer, uint3
 
 void Events::handlePointerLeave(void* data, struct wl_pointer* wl_pointer, uint32_t serial, struct wl_surface* surface) {
     for (auto& ls : g_pTrackpadColorPicker->m_vLayerSurfaces) {
-        if (ls->pSurface == surface) {
-            g_pTrackpadColorPicker->renderSurface(ls.get(), true);
-        }
+        g_pTrackpadColorPicker->renderSurface(ls.get(), true);
     }
 }
 

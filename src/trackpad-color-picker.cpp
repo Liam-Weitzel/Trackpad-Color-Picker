@@ -203,6 +203,12 @@ void CTrackpadColorPicker::init() {
         // Process any pending libinput events
         processLibinputEvents();
 
+        for (auto& ls : g_pTrackpadColorPicker->m_vLayerSurfaces) {
+            if(ls.get() != m_pLastSurface) {
+                g_pTrackpadColorPicker->renderSurface(ls.get(), true);
+            }
+        }
+
         // Process Wayland events
         if (wl_display_prepare_read(m_pWLDisplay) == 0) {
             // Handle any events already in the queue
@@ -651,60 +657,48 @@ void CTrackpadColorPicker::renderSurface(CLayerSurface* pSurface, bool forceInac
         cairo_restore(PCAIRO);
 
         cairo_pattern_destroy(PATTERN);
-    } else if (!g_pTrackpadColorPicker->m_bRenderInactive) {
+
+        if (m_bMagnifierActive) {
+            // Draw crosshair
+            const auto centerX = m_vLastCoords.x * pSurface->m_pMonitor->scale;
+            const auto centerY = m_vLastCoords.y * pSurface->m_pMonitor->scale;
+            const float crosshairSize = 10.0f;
+            const float lineWidth = 1.0f;
+
+            // Set crosshair color (white with black outline for visibility)
+            cairo_set_line_width(PCAIRO, lineWidth + 2.0);
+            cairo_set_source_rgba(PCAIRO, 0, 0, 0, 1);
+
+            // Horizontal line
+            cairo_move_to(PCAIRO, centerX - crosshairSize, centerY);
+            cairo_line_to(PCAIRO, centerX + crosshairSize, centerY);
+            cairo_stroke(PCAIRO);
+
+            // Vertical line
+            cairo_move_to(PCAIRO, centerX, centerY - crosshairSize);
+            cairo_line_to(PCAIRO, centerX, centerY + crosshairSize);
+            cairo_stroke(PCAIRO);
+
+            // Draw white inner lines
+            cairo_set_line_width(PCAIRO, lineWidth);
+            cairo_set_source_rgba(PCAIRO, 1, 1, 1, 1);
+
+            // Horizontal line
+            cairo_move_to(PCAIRO, centerX - crosshairSize, centerY);
+            cairo_line_to(PCAIRO, centerX + crosshairSize, centerY);
+            cairo_stroke(PCAIRO);
+
+            // Vertical line
+            cairo_move_to(PCAIRO, centerX, centerY - crosshairSize);
+            cairo_line_to(PCAIRO, centerX, centerY + crosshairSize);
+            cairo_stroke(PCAIRO);
+        }
+    } else {
+        // If magnifier is inactive, draw transparent surface
         cairo_set_operator(PCAIRO, CAIRO_OPERATOR_SOURCE);
         cairo_set_source_rgba(PCAIRO, 0, 0, 0, 0);
-        cairo_rectangle(PCAIRO, 0, 0, pSurface->m_pMonitor->size.x * pSurface->m_pMonitor->scale, pSurface->m_pMonitor->size.y * pSurface->m_pMonitor->scale);
-        cairo_fill(PCAIRO);
-    } else {
-        const auto SCALEBUFS  = Vector2D{pSurface->screenBuffer.pixelSize.x / PBUFFER->pixelSize.x, pSurface->screenBuffer.pixelSize.y / PBUFFER->pixelSize.y};
-        const auto PATTERNPRE = cairo_pattern_create_for_surface(pSurface->screenBuffer.surface);
-        cairo_pattern_set_filter(PATTERNPRE, CAIRO_FILTER_BILINEAR);
-        cairo_matrix_t matrixPre;
-        cairo_matrix_init_identity(&matrixPre);
-        cairo_matrix_scale(&matrixPre, SCALEBUFS.x, SCALEBUFS.y);
-        cairo_pattern_set_matrix(PATTERNPRE, &matrixPre);
-        cairo_set_source(PCAIRO, PATTERNPRE);
         cairo_paint(PCAIRO);
-
-        cairo_surface_flush(PBUFFER->surface);
-
-        cairo_pattern_destroy(PATTERNPRE);
     }
-
-    // Draw crosshair
-    const auto centerX = m_vLastCoords.x * pSurface->m_pMonitor->scale;
-    const auto centerY = m_vLastCoords.y * pSurface->m_pMonitor->scale;
-    const float crosshairSize = 10.0f; // Adjust size as needed
-    const float lineWidth = 1.0f;      // Adjust thickness as needed
-
-    // Set crosshair color (white with black outline for visibility)
-    cairo_set_line_width(PCAIRO, lineWidth + 2.0);
-    cairo_set_source_rgba(PCAIRO, 0, 0, 0, 1);
-
-    // Horizontal line
-    cairo_move_to(PCAIRO, centerX - crosshairSize, centerY);
-    cairo_line_to(PCAIRO, centerX + crosshairSize, centerY);
-    cairo_stroke(PCAIRO);
-
-    // Vertical line
-    cairo_move_to(PCAIRO, centerX, centerY - crosshairSize);
-    cairo_line_to(PCAIRO, centerX, centerY + crosshairSize);
-    cairo_stroke(PCAIRO);
-
-    // Draw white inner lines
-    cairo_set_line_width(PCAIRO, lineWidth);
-    cairo_set_source_rgba(PCAIRO, 1, 1, 1, 1);
-
-    // Horizontal line
-    cairo_move_to(PCAIRO, centerX - crosshairSize, centerY);
-    cairo_line_to(PCAIRO, centerX + crosshairSize, centerY);
-    cairo_stroke(PCAIRO);
-
-    // Vertical line
-    cairo_move_to(PCAIRO, centerX, centerY - crosshairSize);
-    cairo_line_to(PCAIRO, centerX, centerY + crosshairSize);
-    cairo_stroke(PCAIRO);
 
     sendFrame(pSurface);
     cairo_destroy(PCAIRO);
