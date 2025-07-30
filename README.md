@@ -30,7 +30,13 @@ Launch it. Trackpad pinch to zoom in/out. Move the mouse. Click. Paste. That's i
 
 # Building
 
-Building is done via CMake:
+Building via nix:
+```sh
+nix develop .#Trackpad-Color-Picker
+nix build .#Trackpad-Color-Picker
+```
+
+Or building via CMake:
 
 ```sh
 cmake --no-warn-unused-cli -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr -S . -B ./build

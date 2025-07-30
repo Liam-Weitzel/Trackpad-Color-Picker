@@ -106,6 +106,8 @@ class CTrackpadColorPicker {
     CColor getColorFromPixel(CLayerSurface* pLS, Vector2D pix);
     float getTargetScale(float monitor_scale);
     void handlePinchBegin(struct libinput_event_gesture* event);
+    void handleMagOpen();
+    void handleScroll(struct libinput_event_pointer* event);
     void handlePinchUpdate(struct libinput_event_gesture* event);
     void handlePinchEnd(struct libinput_event_gesture* event);
     void processLibinputEvents();

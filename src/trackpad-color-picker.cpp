@@ -48,6 +48,21 @@ void CTrackpadColorPicker::processLibinputEvents() {
                 handlePinchEnd(gesture);
                 break;
             }
+            case LIBINPUT_EVENT_POINTER_AXIS: {
+                auto pointer_event = libinput_event_get_pointer_event(event);
+                handleScroll(pointer_event);
+                break;
+            }
+            case LIBINPUT_EVENT_KEYBOARD_KEY: {
+                auto kbd_event = libinput_event_get_keyboard_event(event);
+                uint32_t key = libinput_event_keyboard_get_key(kbd_event);
+                uint32_t state = libinput_event_keyboard_get_key_state(kbd_event);
+
+                if (key == 70) { // Scroll lock
+                    handleMagOpen();
+                }
+                break;
+            }
             default:
                 break;
         }
@@ -56,7 +71,82 @@ void CTrackpadColorPicker::processLibinputEvents() {
     }
 }
 
+void CTrackpadColorPicker::handleScroll(struct libinput_event_pointer* event) {
+    // Check which axis the scroll event is for (vertical scroll is typical for zoom)
+    if (libinput_event_pointer_has_axis(event, LIBINPUT_POINTER_AXIS_SCROLL_VERTICAL)) {
+        // Get scroll delta (in discrete steps or precise depending on device)
+        double delta = libinput_event_pointer_get_axis_value(event, LIBINPUT_POINTER_AXIS_SCROLL_VERTICAL);
+
+        // You may want to invert delta depending on your zoom direction preference
+        // Positive delta means scroll up; negative means scroll down
+        float scaleChange = 1.0f + static_cast<float>(delta) * 0.03f; // adjust sensitivity (0.1f)
+
+        // Calculate new target scale clamped between 1.0 and 10.0 (same limits as pinch)
+        float target_scale = m_fScale * scaleChange;
+        target_scale = std::max(1.0f, std::min(10.0f, target_scale));
+
+        // Smooth interpolation to target scale (reuse your pinch logic alpha)
+        float alpha = 0.3f;
+        float new_scale = m_fScale + (target_scale - m_fScale) * alpha;
+
+        if (new_scale < m_targetExitScale) {
+            finish();
+            return;
+        }
+
+        if (std::abs(new_scale - m_fScale) > 0.001f) {
+            m_fScale = new_scale;
+
+            if (m_pLastSurface && m_pLastSurface->pSurface) {
+                m_pLastSurface->rendered = false;
+                renderSurface(m_pLastSurface);
+                if (m_pWLDisplay) {
+                    wl_display_flush(m_pWLDisplay);
+                }
+            }
+        }
+    }
+}
+
 void CTrackpadColorPicker::handlePinchBegin(struct libinput_event_gesture* event) {
+    if (m_bMagnifierActive)
+        return;
+    m_bMagnifierActive = true;
+
+    if(!m_bFirstLoad) {
+        signal(SIGTERM, sigHandler);
+
+        m_pWLRegistry = wl_display_get_registry(m_pWLDisplay);
+
+        wl_registry_add_listener(m_pWLRegistry, &Events::registryListener, nullptr);
+
+        wl_display_roundtrip(m_pWLDisplay);
+    }
+    
+    for (auto& m : m_vMonitors) {
+        m_vLayerSurfaces.emplace_back(std::make_unique<CLayerSurface>(m.get()));
+
+        m_pLastSurface = m_vLayerSurfaces.back().get();
+
+        m->pSCFrame = zwlr_screencopy_manager_v1_capture_output(m_pSCMgr, false, m->output);
+
+        zwlr_screencopy_frame_v1_add_listener(m->pSCFrame, &Events::screencopyListener, m_pLastSurface);
+    }
+
+    wl_display_roundtrip(m_pWLDisplay);
+
+    float monitor_scale = (float)m_pLastSurface->screenBuffer.pixelSize.x / (float)m_pLastSurface->m_pMonitor->size.x;
+    m_targetExitScale = getTargetScale(monitor_scale);
+    m_fScale = m_targetExitScale + 0.001f;
+    
+    // Render surfaces
+    for (auto& ls : m_vLayerSurfaces) {
+        ls->rendered = false;
+        renderSurface(ls.get());
+    }
+}
+
+void CTrackpadColorPicker::handleMagOpen() {
     if (m_bMagnifierActive)
         return;
     m_bMagnifierActive = true;
